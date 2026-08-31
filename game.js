@@ -848,13 +848,13 @@
     isFireballMode   = (power >= 80);
     hasTouchedGround = false;
 
-    // Pre-determine all 6 events
-    hasJetpackEvent  = Math.random() < 0.4;
-    hasAirplaneEvent = Math.random() < 0.4;
-    hasEagleEvent    = Math.random() < 0.4;
-    hasWindEvent     = Math.random() < 0.4;
-    hasRocketEvent   = Math.random() < 0.4;
-    hasMoleEvent     = Math.random() < 0.4;
+    // Pre-determine all 6 events (50% probability each)
+    hasJetpackEvent  = Math.random() < 0.5;
+    hasAirplaneEvent = Math.random() < 0.5;
+    hasEagleEvent    = Math.random() < 0.5;
+    hasWindEvent     = Math.random() < 0.5;
+    hasRocketEvent   = Math.random() < 0.5;
+    hasMoleEvent     = Math.random() < 0.5;
 
     // ★ Event bonus formula: kickPower * 0.5 * power%
     eventBonus        = Math.max(1, Math.round(getBaseKickPower() * 0.5 * pFactor));
