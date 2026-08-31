@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>3D 축구공 멀리 차기 (Soccer Kick 3D)</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800;900&display=swap" rel="stylesheet">
+  <!-- Three.js 3D WebGL Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Top HUD -->
+    <div id="hud" class="hud-layer">
+      <div class="hud-card">
+        <span class="hud-label">현재 거리</span>
+        <span id="current-distance" class="hud-value">0.0 m</span>
+      </div>
+      <div class="hud-card highlight">
+        <span class="hud-label">최고 기록 🏆</span>
+        <span id="best-distance" class="hud-value">0.0 m</span>
+      </div>
+      <div class="hud-card coin-card">
+        <span class="hud-label">보유 코인 💰</span>
+        <span id="hud-coins" class="hud-value">0</span>
+      </div>
+      <div class="hud-card power-card">
+        <span class="hud-label">킥 파워 ⚡</span>
+        <span id="hud-kick-power" class="hud-value">100m</span>
+      </div>
+    </div>
+
+    <!-- Event Banner Popup -->
+    <div id="event-banner" class="event-banner hidden">
+      <div id="event-icon" class="event-icon">✈️</div>
+      <div id="event-text" class="event-text">AIRPLANE BOOST! +50m</div>
+    </div>
+
+    <!-- Power Gauge Overlay -->
+    <div id="power-gauge-container" class="power-gauge-container">
+      <div class="gauge-header">
+        <span>POWER</span>
+        <span id="power-number">0%</span>
+      </div>
+      <div class="gauge-bar-outer">
+        <div id="power-bar" class="gauge-bar-inner"></div>
+      </div>
+      <div class="power-hint" id="power-hint">화면을 꾹 눌러 파워를 차징하세요!</div>
+    </div>
+
+    <!-- Instructions Banner -->
+    <div id="start-instruction" class="instruction-banner">
+      <div class="instruction-icon">⚽</div>
+      <div class="instruction-text">
+        <h2>3D 축구공 멀리 차기!</h2>
+        <p>화면을 <strong>꾹 누르면</strong> 파워 게이지가 상승합니다.<br>원하는 순간에 <strong>터치를 떼면</strong> 공을 멀리 찹니다!</p>
+      </div>
+    </div>
+
+    <!-- Result Popup Modal -->
+    <div id="result-modal" class="modal-overlay hidden">
+      <div class="modal-content">
+        <div id="result-badge" class="result-badge">NEW RECORD! 🎉</div>
+        <h1 class="result-title" id="result-title">GREAT KICK!</h1>
+        
+        <div class="result-stats">
+          <div class="stat-box">
+            <span class="stat-label">날아간 거리</span>
+            <span class="stat-value" id="final-distance">0.0 m</span>
+          </div>
+          <div class="stat-box highlight-box">
+            <span class="stat-label">획득 코인 💰</span>
+            <span class="stat-value" id="earned-coins">+0</span>
+          </div>
+        </div>
+
+        <div class="upgrade-section">
+          <div class="upgrade-info">
+            <span>보유 코인: <strong id="modal-coins">0</strong> 코인</span>
+            <span>현재 킥 파워: <strong id="modal-kick-power">100m</strong></span>
+          </div>
+          <button id="upgrade-btn" class="btn-upgrade">
+            <span class="btn-icon">⚡</span> 킥 파워 +10m 업그레이드 (<span id="upgrade-cost">100</span> 코인)
+          </button>
+        </div>
+
+        <button id="restart-btn" class="btn-primary">
+          <span class="btn-icon">🔄</span> 다시 차기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>
