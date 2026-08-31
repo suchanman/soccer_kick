@@ -10,6 +10,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;600;800;900&display=swap" rel="stylesheet">
   <!-- Three.js 3D WebGL Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <!-- Firebase SDK (compat v9) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <div id="game-container">
@@ -33,13 +36,11 @@
         <span class="hud-label">킥 파워 ⚡</span>
         <span id="hud-kick-power" class="hud-value">100m</span>
       </div>
+      <button id="ranking-btn" class="hud-ranking-btn">🏅 랭킹</button>
     </div>
 
-    <!-- Event Banner Popup -->
-    <div id="event-banner" class="event-banner hidden">
-      <div id="event-icon" class="event-icon">✈️</div>
-      <div id="event-text" class="event-text">AIRPLANE BOOST! +50m</div>
-    </div>
+    <!-- Stacked Event Banner Container -->
+    <div id="event-banner-container"></div>
 
     <!-- Power Gauge Overlay -->
     <div id="power-gauge-container" class="power-gauge-container">
@@ -61,6 +62,9 @@
         <p>화면을 <strong>꾹 누르면</strong> 파워 게이지가 상승합니다.<br>원하는 순간에 <strong>터치를 떼면</strong> 공을 멀리 찹니다!</p>
       </div>
     </div>
+
+    <!-- Speed Multiplier Button -->
+    <button id="speed-btn" class="speed-btn">▶▶ 1x</button>
 
     <!-- Result Popup Modal -->
     <div id="result-modal" class="modal-overlay hidden">
@@ -91,6 +95,32 @@
 
         <button id="restart-btn" class="btn-primary">
           <span class="btn-icon">🔄</span> 다시 차기
+        </button>
+      </div>
+    </div>
+
+    <!-- Nickname Input Modal (shown on first launch) -->
+    <div id="nickname-modal" class="modal-overlay">
+      <div class="modal-content">
+        <div class="nickname-icon">⚽</div>
+        <h1 class="result-title">닉네임 입력</h1>
+        <p class="nickname-desc">랭킹에 등록할 닉네임을 입력해주세요!</p>
+        <input type="text" id="nickname-input" class="nickname-input" placeholder="닉네임 (최대 12자)" maxlength="12" autocomplete="off" />
+        <button id="nickname-submit-btn" class="btn-primary" style="margin-top: 12px;">
+          <span class="btn-icon">🚀</span> 게임 시작!
+        </button>
+      </div>
+    </div>
+
+    <!-- Global Ranking Modal -->
+    <div id="ranking-modal" class="modal-overlay hidden">
+      <div class="modal-content ranking-modal-content">
+        <h1 class="result-title">🏅 글로벌 랭킹 TOP 10</h1>
+        <div id="ranking-list" class="ranking-list">
+          <p class="ranking-loading">랭킹 불러오는 중...</p>
+        </div>
+        <button id="ranking-close-btn" class="btn-primary" style="margin-top: 16px;">
+          <span class="btn-icon">✖</span> 닫기
         </button>
       </div>
     </div>
