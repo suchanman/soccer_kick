@@ -653,6 +653,17 @@
   moleNose.position.set(0, 0.5, 0.35); moleGroup.add(moleNose);
   moleGroup.visible = false;
   scene.add(moleGroup);
+  
+  // 7. Wall (거대한 벽)
+  const wallGroup = new THREE.Group();
+  const wallMesh = new THREE.Mesh(
+    new THREE.BoxGeometry(15, 6, 1),
+    new THREE.MeshStandardMaterial({ color: '#334155', roughness: 0.9 })
+  );
+  wallMesh.position.set(0, 3, 0); // 땅 위로 배치
+  wallGroup.add(wallMesh);
+  wallGroup.visible = false;
+  scene.add(wallGroup);
 
   // ============================================================
   // FIREBALL TRAIL SYSTEM (80%+ power)
@@ -718,6 +729,8 @@
   let hasWindEvent = false, hasRocketEvent = false, hasMoleEvent = false;
 
   let hasHeadwindEvent = false, cpHeadwindTriggered = false, checkPointHeadwindZ = 0;
+  let hasSecondKickEvent = false, secondKickTriggered = false;
+  let hasWallEvent = false, cpWallTriggered = false, checkPointWallZ = 0;
 
   let cpJetpackTriggered = false, cpAirplaneTriggered = false, cpEagleTriggered = false;
   let cpWindTriggered = false, cpRocketTriggered = false, cpMoleTriggered = false;
@@ -762,6 +775,8 @@
     hasJetpackEvent = hasAirplaneEvent = hasEagleEvent = false;
     hasWindEvent = hasRocketEvent = hasMoleEvent = false;
     hasHeadwindEvent = false; cpHeadwindTriggered = false;
+    hasSecondKickEvent = false; secondKickTriggered = false;
+    hasWallEvent = false; cpWallTriggered = false; wallGroup.visible = false;
 
     cpJetpackTriggered = cpAirplaneTriggered = cpEagleTriggered = false;
     cpWindTriggered = cpRocketTriggered = cpMoleTriggered = false;
@@ -860,9 +875,16 @@
     hasRocketEvent   = Math.random() < 0.5;
     hasMoleEvent     = Math.random() < 0.5;
     // 1번 추가
-    hasHeadwindEvent = Math.random() < 0.5;
+    hasHeadwindEvent = Math.random() < 0.3;
     // 2번 추가
     checkPointHeadwindZ = -(baseTargetDistance * 0.8); // 4/5 지점
+    hasSecondKickEvent = Math.random() < 0.5;
+    
+    // triggerBallLaunch 안쪽 이벤트 확률 모여있는 곳에 추가
+    hasWallEvent = Math.random() < 0.5;
+    
+    // triggerBallLaunch 안쪽 체크포인트(checkPointRocketZ 등) 모여있는 곳에 추가
+    checkPointWallZ = -(baseTargetDistance * (5 / 6)); // 5/6 지점
 
     
     // ★ Event bonus formula: kickPower * 0.5 * power%
@@ -1040,6 +1062,21 @@
         ballVel.z += 25.0 * (penaltyDist / 50.0);
         ballVel.y -= 10.0;
       }
+     
+      // ---- NEW STAGE: 거대한 벽 생성 (5/6 지점) ----
+      if (hasWallEvent && !cpWallTriggered && cZ <= checkPointWallZ) {
+        cpWallTriggered = true;
+        showEventBanner('🧱', `통곡의 벽 등장!`);
+        
+        // 벽을 공 앞에 렌더링
+        wallGroup.position.set(ballMesh.position.x, 0, checkPointWallZ - 2.0);
+        wallGroup.visible = true;
+        
+        // 공이 뒤로 튕겨 나감 (기존 속도 반전)
+        ballVel.z = Math.abs(ballVel.z) * 0.6; // 뒤로 60% 힘으로 튕김
+        ballVel.y = 12.0; // 위로 살짝 뜸
+        playBounceSound();
+      }
 
       // ---- GROUND BOUNCE / STOP ----
       if (ballMesh.position.y <= BALL_RADIUS) {
@@ -1076,6 +1113,19 @@
             isGrounded = false;
             return;
           }
+        }
+        // ---- NEW STAGE: 한 번 더 차기 (공 멈출 때) ----
+        if (hasSecondKickEvent && !secondKickTriggered) {
+          secondKickTriggered = true;
+          const extraDist = getBaseKickPower() * (power / 100); // 킥파워 * 파워 비율
+          showEventBanner('🏃‍♂️', `세컨드 킥! 슛!`);
+          totalTargetDistance += extraDist;
+          
+          ballVel.z = -35.0 * (extraDist / 50.0);
+          ballVel.y = 15.0;
+          isGrounded = false;
+          playKickSound(power / 100);
+          return; // 게임 종료를 막고 다시 날아가게 함
         }
 
         // Ball fully stopped → game over
