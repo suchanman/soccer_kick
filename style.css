@@ -581,3 +581,58 @@ canvas {
   0%, 100% { transform: translate(-50%, 0); }
   50% { transform: translate(-50%, -6px); }
 }
+
+/* ============================================================ */
+/* 모바일 환경 최적화 (화면 너비 600px 이하) */
+/* ============================================================ */
+@media (max-width: 600px) {
+  /* 상단 HUD 크기 및 간격 축소 */
+  .hud-layer {
+    top: 10px;
+    gap: 6px;
+  }
+  
+  .hud-card {
+    padding: 4px 10px;
+    min-width: 80px;
+  }
+  
+  .hud-label {
+    font-size: 0.65rem;
+  }
+  
+  .hud-value {
+    font-size: 0.95rem;
+  }
+  
+  .hud-ranking-btn {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+  }
+
+  /* 파워 게이지 배치 및 크기 조절 */
+  .power-gauge-container {
+    bottom: 20px;
+    padding: 10px 16px;
+    width: 95%;
+  }
+
+  /* 5배속 버튼 위치 조정 (우측 상단/중단으로 살짝 올려서 게이지와 분리) */
+  .speed-btn {
+    bottom: 120px;
+    right: 15px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+
+  /* 결과창 모달 쾌적하게 축소 */
+  .modal-content {
+    padding: 24px 16px;
+    width: 95%;
+  }
+  
+  .result-title {
+    font-size: 1.5rem;
+  }
+}
+
