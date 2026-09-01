@@ -1126,15 +1126,19 @@
 
     resultModalEl.classList.remove('hidden');
 
-    // Save to Firestore
+      // Save to Firestore
     if (firebaseEnabled && playerNickname) {
-      db.collection('soccer_scores').add({
-        nickname: playerNickname,
-        distance: parseFloat(finalDistance.toFixed(2)),
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      }).catch(e => console.warn('[Firebase] 기록 저장 실패:', e.message));
+      // 🚀 조건 1: 로컬에서 최고 기록(isNewBest)을 경신했을 때만 저장
+      if (isNewBest) {
+        // 🚀 조건 2: add() 대신 doc(닉네임).set()을 사용하여 기존 랭킹 덮어쓰기
+        db.collection('soccer_scores').doc(playerNickname).set({
+          nickname: playerNickname,
+          distance: parseFloat(finalDistance.toFixed(2)),
+          timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        }).catch(e => console.warn('[Firebase] 기록 저장 실패:', e.message));
+      }
     }
-  }
+
 
   // ============================================================
   // RESIZE
