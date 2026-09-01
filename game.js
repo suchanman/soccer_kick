@@ -717,6 +717,8 @@
   let hasJetpackEvent = false, hasAirplaneEvent = false, hasEagleEvent = false;
   let hasWindEvent = false, hasRocketEvent = false, hasMoleEvent = false;
 
+  let hasHeadwindEvent = false, cpHeadwindTriggered = false, checkPointHeadwindZ = 0;
+
   let cpJetpackTriggered = false, cpAirplaneTriggered = false, cpEagleTriggered = false;
   let cpWindTriggered = false, cpRocketTriggered = false, cpMoleTriggered = false;
 
@@ -759,6 +761,8 @@
 
     hasJetpackEvent = hasAirplaneEvent = hasEagleEvent = false;
     hasWindEvent = hasRocketEvent = hasMoleEvent = false;
+    hasHeadwindEvent = false; cpHeadwindTriggered = false;
+
     cpJetpackTriggered = cpAirplaneTriggered = cpEagleTriggered = false;
     cpWindTriggered = cpRocketTriggered = cpMoleTriggered = false;
     isJetpackAttached = isJetpackDetached = false;
@@ -855,7 +859,12 @@
     hasWindEvent     = Math.random() < 0.5;
     hasRocketEvent   = Math.random() < 0.5;
     hasMoleEvent     = Math.random() < 0.5;
+    // 1번 추가
+    hasHeadwindEvent = Math.random() < 0.5;
+    // 2번 추가
+    checkPointHeadwindZ = -(baseTargetDistance * 0.8); // 4/5 지점
 
+    
     // ★ Event bonus formula: kickPower * 0.5 * power%
     eventBonus        = Math.max(1, Math.round(getBaseKickPower() * 0.5 * pFactor));
     eventBonusVelScale = eventBonus / 50.0; // scale relative to base tuning (50m)
@@ -1019,6 +1028,17 @@
           isRocketPushing = false;
           setTimeout(() => { rocketGroup.visible = false; }, 800);
         }
+      }
+      // ---- NEW STAGE: 거꾸로 부는 바람 (4/5 지점) ----
+      if (hasHeadwindEvent && !cpHeadwindTriggered && cZ <= checkPointHeadwindZ) {
+        cpHeadwindTriggered = true;
+        const penaltyDist = getBaseKickPower() * 0.2; // 킥 파워의 20%
+        showEventBanner('🌪️', `역풍 발생! 거리 감소!`);
+        totalTargetDistance -= penaltyDist;
+        
+        // 공을 뒤로(양수 z방향) 밀어내고 고도를 낮춤
+        ballVel.z += 25.0 * (penaltyDist / 50.0);
+        ballVel.y -= 10.0;
       }
 
       // ---- GROUND BOUNCE / STOP ----
