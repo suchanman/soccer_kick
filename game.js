@@ -951,7 +951,7 @@
 
 
       // ---- STAGE 1: Jetpack (1/4 point) ----
-      if (hasJetpackEvent && !cpJetpackTriggered && cZ <= checkPointJetpackZ) {
+      if (hasJetpackEvent && !cpJetpackTriggered && cZ <= -(totalTargetDistance * 0.25)) {
         cpJetpackTriggered = true;
         showEventBanner('🚀', `JETPACK BOOST! +${eventBonus}m`);
         totalTargetDistance += eventBonus;
@@ -977,10 +977,10 @@
       }
 
       // ---- STAGE 2: Airplane (1/3 point) ----
-      if (hasAirplaneEvent && !cpAirplaneTriggered) {
-        if (cZ <= checkPointAirplaneZ + 25.0 && !airplaneActive) {
+          if (hasAirplaneEvent && !cpAirplaneTriggered) {
+           if (cZ <= -(totalTargetDistance * (1/3)) + 25.0 && !airplaneActive) {
           airplaneActive = true; airplaneProgress = 0;
-          airplaneGroup.position.set(-30, Math.max(ballMesh.position.y, 2.0), checkPointAirplaneZ);
+          airplaneGroup.position.set(-30, Math.max(ballMesh.position.y, 2.0), -(totalTargetDistance * (1/3)));
           airplaneGroup.visible = true;
           showEventBanner('✈️', `AIRPLANE BOOST! +${eventBonus}m`);
         }
@@ -1001,7 +1001,7 @@
       }
 
       // ---- STAGE 3: Eagle (2/4 point) ----
-      if (hasEagleEvent && !cpEagleTriggered && cZ <= checkPointEagleZ) {
+      if (hasEagleEvent && !cpEagleTriggered && cZ <= -(totalTargetDistance * 0.50)) {
         cpEagleTriggered = true;
         showEventBanner('🦅', `EAGLE SNATCH! +${eventBonus}m`);
         totalTargetDistance += eventBonus;
@@ -1022,7 +1022,7 @@
       }
 
       // ---- STAGE 4: Wind (2/3 point) ----
-      if (hasWindEvent && !cpWindTriggered && cZ <= checkPointWindZ) {
+      if (hasWindEvent && !cpWindTriggered && cZ <= -(totalTargetDistance * (2/3))) {
         cpWindTriggered = true;
         showEventBanner('🌬️', `WIND GUST! +${eventBonus}m`);
         totalTargetDistance += eventBonus;
@@ -1034,7 +1034,7 @@
       }
 
       // ---- STAGE 5: Rocket (3/4 point) ----
-      if (hasRocketEvent && !cpRocketTriggered && cZ <= checkPointRocketZ) {
+      if (hasRocketEvent && !cpRocketTriggered && cZ <= -(totalTargetDistance * 0.75)) {
         cpRocketTriggered = true;
         showEventBanner('🚀', `ROCKET THRUST! +${eventBonus}m`);
         totalTargetDistance += eventBonus;
@@ -1052,7 +1052,7 @@
         }
       }
       // ---- NEW STAGE: 거꾸로 부는 바람 (4/5 지점) ----
-      if (hasHeadwindEvent && !cpHeadwindTriggered && cZ <= checkPointHeadwindZ) {
+      if (hasHeadwindEvent && !cpHeadwindTriggered && cZ <= -(totalTargetDistance * 0.8)) {
         cpHeadwindTriggered = true;
         const penaltyDist = getBaseKickPower() * 0.2; // 킥 파워의 20%
         showEventBanner('🌪️', `역풍 발생! 거리 감소!`);
@@ -1064,12 +1064,12 @@
       }
      
       // ---- NEW STAGE: 거대한 벽 생성 (5/6 지점) ----
-      if (hasWallEvent && !cpWallTriggered && cZ <= checkPointWallZ) {
+      if (hasWallEvent && !cpWallTriggered && cZ <= -(totalTargetDistance * (5/6))) {
         cpWallTriggered = true;
         showEventBanner('🧱', `통곡의 벽 등장!`);
-        
         // 벽을 공 앞에 렌더링
-        wallGroup.position.set(ballMesh.position.x, 0, checkPointWallZ - 2.0);
+        wallGroup.position.set(ballMesh.position.x, 0, -(totalTargetDistance * (5/6)) - 2.0);
+
         wallGroup.visible = true;
         
         // 공이 뒤로 튕겨 나감 (기존 속도 반전)
