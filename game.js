@@ -881,7 +881,7 @@
     hasSecondKickEvent = Math.random() < 0.5;
     
     // triggerBallLaunch 안쪽 이벤트 확률 모여있는 곳에 추가
-    hasWallEvent = Math.random() < 0.5;
+    hasWallEvent = Math.random() < 0.3;
     
     // triggerBallLaunch 안쪽 체크포인트(checkPointRocketZ 등) 모여있는 곳에 추가
     checkPointWallZ = -(baseTargetDistance * (5 / 6)); // 5/6 지점
