@@ -288,9 +288,9 @@
   let speedMultiplier = 1;
 
   speedBtnEl.addEventListener('click', () => {
-    speedMultiplier = speedMultiplier === 1 ? 3 : 1;
-    speedBtnEl.textContent = speedMultiplier === 1 ? '▶▶ 1x' : '▶▶▶ 3x';
-    speedBtnEl.classList.toggle('active', speedMultiplier === 3);
+    speedMultiplier = speedMultiplier === 1 ? 5 : 1;
+    speedBtnEl.textContent = speedMultiplier === 1 ? '▶▶ 1x' : '▶▶▶ 5x';
+    speedBtnEl.classList.toggle('active', speedMultiplier === 5);
   });
 
   // ============================================================
@@ -892,20 +892,32 @@
       if (kickAnimProgress >= 1.0) triggerBallLaunch();
     }
 
-    // --- FLIGHT PHYSICS ---
+      // --- FLIGHT PHYSICS ---
     if (gameState === STATES.FLYING) {
       ballVel.y -= 25.0 * dt;
-      ballVel.z *= Math.pow(0.997, dt * 60);
-      ballVel.x *= Math.pow(0.997, dt * 60);
+      
+      // 🚀 고도(y)에 따른 공기 저항 튜닝 (높을수록 저항 감소)
+      const altitude = Math.max(0, ballMesh.position.y);
+      const baseDrag = 0.996; // 기본 지상 공기 저항
+      // 고도가 올라갈수록 저항이 줄어듦 (최대 0.9995까지만 적용)
+      const airDrag = Math.min(0.9995, baseDrag + (altitude * 0.00002)); 
 
+      // 기존 0.997 대신 계산된 airDrag 변수를 적용
+      ballVel.z *= Math.pow(airDrag, dt * 60);
+      ballVel.x *= Math.pow(airDrag, dt * 60);
+
+      // 공의 위치 이동 (기존과 동일)
       ballMesh.position.x += ballVel.x * dt;
       ballMesh.position.y += ballVel.y * dt;
       ballMesh.position.z += ballVel.z * dt;
+      
+      // 공의 회전 효과 (기존과 완벽하게 동일하게 유지!)
       ballMesh.rotation.x += ballRot.x * dt;
 
       if (isFireballMode && !hasTouchedGround) createFireParticle(ballMesh.position);
 
       const cZ = ballMesh.position.z;
+
 
       // ---- STAGE 1: Jetpack (1/4 point) ----
       if (hasJetpackEvent && !cpJetpackTriggered && cZ <= checkPointJetpackZ) {
