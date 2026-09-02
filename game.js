@@ -330,9 +330,9 @@
   let speedMultiplier = 1;
 
   speedBtnEl.addEventListener('click', () => {
-    speedMultiplier = speedMultiplier === 1 ? 50 : 1;
-    speedBtnEl.textContent = speedMultiplier === 1 ? '▶▶ 1x' : '▶▶▶ 50x';
-    speedBtnEl.classList.toggle('active', speedMultiplier === 50);
+    speedMultiplier = speedMultiplier === 1 ? 20 : 1;
+    speedBtnEl.textContent = speedMultiplier === 1 ? '▶▶ 1x' : '▶▶▶ 20x';
+    speedBtnEl.classList.toggle('active', speedMultiplier === 20);
   });
 
   // ============================================================
