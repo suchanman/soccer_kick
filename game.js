@@ -214,9 +214,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const seenNicknames = new Set();
       let displayRank = 0;
 
-      snapshot.docs.forEach((doc) => {
-        const data = doc.data();
-        const nickname = data.nickname || '익명';
+      const rCount = data.rebirth || 0;
+      let badge = rCount > 0 ? '⭐'.repeat(Math.min(rCount, 3)) : '';
+      if (rCount >= 5) badge = '🌟'; // 환생 5번 이상은 빛나는 별!
+      const nickname = (data.nickname || '익명') + ' ' + badge;
+      const data = doc.data();
+      const nickname = data.nickname || '익명';
 
         if (seenNicknames.has(nickname) || displayRank >= 10) return;
         seenNicknames.add(nickname);
@@ -291,47 +294,120 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================================
   // MULTI-UPGRADE SYSTEM
   // ============================================================
+  // ============================================================
+  // MULTI-UPGRADE SYSTEM & 🌌 REBIRTH (환생) SYSTEM
+  // ============================================================
   let coins = parseInt(localStorage.getItem('soccer_coins') || '0', 10);
   let lvKick  = parseInt(localStorage.getItem('soccer_upg_kick') || '0', 10);
   let lvPower = parseInt(localStorage.getItem('soccer_upg_power') || '0', 10);
   let lvEvent = parseInt(localStorage.getItem('soccer_upg_event') || '0', 10);
   let lvCoin  = parseInt(localStorage.getItem('soccer_upg_coin') || '0', 10);
 
+  // 🌟 환생 변수들 (우주 결정, 슈퍼 업그레이드)
+  let rebirthCount = parseInt(localStorage.getItem('soccer_rebirth_count') || '0', 10);
+  let crystals = parseInt(localStorage.getItem('soccer_crystals') || '0', 10);
+  let lvSuperPower = parseInt(localStorage.getItem('soccer_upg_super_power') || '0', 10);
+  let lvSuperCoin = parseInt(localStorage.getItem('soccer_upg_super_coin') || '0', 10);
+  let lvStartingWarp = parseInt(localStorage.getItem('soccer_upg_starting_warp') || '0', 10);
+
   function getBaseKickPower() { return 100 + lvKick * 10; }
   function getCost(lv) { return Math.floor(100 * Math.pow(1.2, lv)); }
 
+  // 🌟 환생 전용 UI 동적 생성 (HTML 수정 불필요)
+  const rebirthStyles = document.createElement('style');
+  rebirthStyles.innerHTML = `
+    .btn-rebirth-hud { position: absolute; top: 120px; left: 20px; background: linear-gradient(135deg, #7e22ce, #c026d3); border: 2px solid #e879f9; color: white; padding: 10px 16px; border-radius: 12px; font-weight: 900; box-shadow: 0 0 15px rgba(192,38,211,0.6); cursor: pointer; z-index: 50; }
+    #crystal-display { position: absolute; top: 170px; left: 20px; color: #e879f9; font-weight: 900; font-size: 1.1rem; text-shadow: 1px 1px 0 #000; z-index: 50; }
+    .rebirth-modal-content { background: rgba(30,20,50,0.95); border-color: #a855f7; }
+    .rb-item { display:flex; justify-content:space-between; align-items:center; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px; margin-bottom: 8px; font-size:0.85rem; color:#e2e8f0; }
+    .btn-rb-buy { background: #9333ea; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .btn-rb-buy:disabled { background: #475569; color: #94a3b8; }
+  `;
+  document.head.appendChild(rebirthStyles);
+
+  const rbBtn = document.createElement('button');
+  rbBtn.className = 'btn-rebirth-hud';
+  rbBtn.textContent = '🌌 환생 스탯';
+  rbBtn.onclick = () => { document.getElementById('rebirth-modal').classList.remove('hidden'); updateRebirthUI(); };
+  document.body.appendChild(rbBtn);
+
+  const crystalDisp = document.createElement('div');
+  crystalDisp.id = 'crystal-display';
+  document.body.appendChild(crystalDisp);
+
+  const rbModal = document.createElement('div');
+  rbModal.id = 'rebirth-modal';
+  rbModal.className = 'modal-overlay hidden';
+  rbModal.innerHTML = `
+    <div class="modal-content rebirth-modal-content">
+      <h2 style="color:#e879f9; margin-bottom: 5px;">🌌 우주 환생 🌌</h2>
+      <p style="font-size:0.8rem; color:#cbd5e1; margin-bottom: 15px;">최고 기록 10,000m마다 우주 결정 1개 획득<br>(환생 시 모든 일반 코인과 레벨이 초기화됩니다)</p>
+      
+      <button id="btn-do-rebirth" class="btn-primary" style="background: linear-gradient(135deg, #be185d, #e11d48); margin-bottom: 20px;">지금 환생하기</button>
+
+      <div style="text-align: left; margin-bottom: 5px; color:#e879f9; font-weight:bold;">보유 결정: <span id="modal-crystals">0</span>개</div>
+      
+      <div class="rb-item"><div><span>슈퍼 파워 (+100%)</span><br><span id="rb-lvl-power" style="color:#fde047;">Lv.0</span></div><button id="btn-rb-power" class="btn-rb-buy">구매</button></div>
+      <div class="rb-item"><div><span>슈퍼 코인 (+500%)</span><br><span id="rb-lvl-coin" style="color:#fde047;">Lv.0</span></div><button id="btn-rb-coin" class="btn-rb-buy">구매</button></div>
+      <div class="rb-item"><div><span>스타팅 워프 (+10km)</span><br><span id="rb-lvl-warp" style="color:#fde047;">Lv.0</span></div><button id="btn-rb-warp" class="btn-rb-buy">구매</button></div>
+      
+      <button onclick="document.getElementById('rebirth-modal').classList.add('hidden')" class="btn-upgrade" style="margin-top: 15px;">닫기</button>
+    </div>
+  `;
+  document.body.appendChild(rbModal);
+
+  function updateRebirthUI() {
+    crystalDisp.textContent = `💎 결정: ${crystals}개`;
+    document.getElementById('modal-crystals').textContent = crystals;
+    
+    let expectedCrystals = Math.floor(bestDistance / 10000);
+    const rbBtnMain = document.getElementById('btn-do-rebirth');
+    rbBtnMain.textContent = expectedCrystals > 0 ? `지금 환생 (결정 +${expectedCrystals}개)` : `환생 불가 (10,000m 필요)`;
+    rbBtnMain.disabled = expectedCrystals <= 0;
+
+    document.getElementById('rb-lvl-power').textContent = `Lv.${lvSuperPower} (비용: ${lvSuperPower+1}개)`; document.getElementById('btn-rb-power').disabled = crystals < lvSuperPower+1;
+    document.getElementById('rb-lvl-coin').textContent = `Lv.${lvSuperCoin} (비용: ${lvSuperCoin+1}개)`; document.getElementById('btn-rb-coin').disabled = crystals < lvSuperCoin+1;
+    document.getElementById('rb-lvl-warp').textContent = `Lv.${lvStartingWarp} (비용: ${(lvStartingWarp+1)*2}개)`; document.getElementById('btn-rb-warp').disabled = crystals < (lvStartingWarp+1)*2;
+  }
+
+  document.getElementById('btn-do-rebirth').onclick = () => {
+    let expectedCrystals = Math.floor(bestDistance / 10000);
+    if(expectedCrystals > 0) {
+      crystals += expectedCrystals; rebirthCount++;
+      localStorage.setItem('soccer_crystals', crystals); localStorage.setItem('soccer_rebirth_count', rebirthCount);
+      
+      // 하드 리셋 (환생)
+      coins = 0; lvKick = 0; lvPower = 0; lvEvent = 0; lvCoin = 0; bestDistance = 0;
+      localStorage.setItem('soccer_coins', 0); localStorage.setItem('soccer_upg_kick', 0); localStorage.setItem('soccer_upg_power', 0);
+      localStorage.setItem('soccer_upg_event', 0); localStorage.setItem('soccer_upg_coin', 0); localStorage.setItem('soccer_3d_best_distance', 0);
+      
+      if(firebaseEnabled && playerNickname) { // 랭킹에 환생 횟수 업데이트
+        db.collection('soccer_scores').doc(playerNickname).set({ nickname: playerNickname, distance: 0, rebirth: rebirthCount, timestamp: firebase.firestore.FieldValue.serverTimestamp() });
+      }
+      alert(`우주 환생 성공!\n우주 결정 ${expectedCrystals}개를 얻었습니다.`);
+      location.reload(); // 깔끔하게 새로고침
+    }
+  };
+
+  document.getElementById('btn-rb-power').onclick = () => { const c = lvSuperPower+1; if(crystals >= c){ crystals-=c; lvSuperPower++; localStorage.setItem('soccer_crystals', crystals); localStorage.setItem('soccer_upg_super_power', lvSuperPower); updateRebirthUI(); }};
+  document.getElementById('btn-rb-coin').onclick = () => { const c = lvSuperCoin+1; if(crystals >= c){ crystals-=c; lvSuperCoin++; localStorage.setItem('soccer_crystals', crystals); localStorage.setItem('soccer_upg_super_coin', lvSuperCoin); updateRebirthUI(); }};
+  document.getElementById('btn-rb-warp').onclick = () => { const c = (lvStartingWarp+1)*2; if(crystals >= c){ crystals-=c; lvStartingWarp++; localStorage.setItem('soccer_crystals', crystals); localStorage.setItem('soccer_upg_starting_warp', lvStartingWarp); updateRebirthUI(); }};
+  updateRebirthUI();
+
   const upgradeModalEl = document.getElementById('upgrade-modal');
-  document.getElementById('upgrade-tab-btn')?.addEventListener('click', () => {
-    upgradeModalEl?.classList.remove('hidden'); updateCurrencyUI();
-  });
+  document.getElementById('upgrade-tab-btn')?.addEventListener('click', () => { upgradeModalEl?.classList.remove('hidden'); updateCurrencyUI(); });
   document.getElementById('upgrade-close-btn')?.addEventListener('click', () => upgradeModalEl?.classList.add('hidden'));
 
   function updateCurrencyUI() {
     if (hudCoinsEl) hudCoinsEl.textContent = coins.toLocaleString();
     if (hudKickPowerEl) hudKickPowerEl.textContent = getBaseKickPower() + 'm';
-    
     if(!document.getElementById('upg-current-coins')) return; 
     
     document.getElementById('upg-current-coins').textContent = coins.toLocaleString();
-    document.getElementById('upg-lvl-kick').textContent = 'Lv.' + lvKick;
-    document.getElementById('upg-val-kick').textContent = getBaseKickPower() + 'm';
-    document.getElementById('upg-cost-kick').textContent = getCost(lvKick).toLocaleString();
-    document.getElementById('upg-btn-kick').disabled = coins < getCost(lvKick);
-    
-    document.getElementById('upg-lvl-power').textContent = 'Lv.' + lvPower;
-    document.getElementById('upg-val-power').textContent = '+' + (lvPower * 5) + '%';
-    document.getElementById('upg-cost-power').textContent = getCost(lvPower).toLocaleString();
-    document.getElementById('upg-btn-power').disabled = coins < getCost(lvPower);
-
-    document.getElementById('upg-lvl-event').textContent = 'Lv.' + lvEvent;
-    document.getElementById('upg-val-event').textContent = '+' + (lvEvent * 5) + '%';
-    document.getElementById('upg-cost-event').textContent = getCost(lvEvent).toLocaleString();
-    document.getElementById('upg-btn-event').disabled = coins < getCost(lvEvent);
-
-    document.getElementById('upg-lvl-coin').textContent = 'Lv.' + lvCoin;
-    document.getElementById('upg-val-coin').textContent = '+' + (lvCoin * 10) + '%';
-    document.getElementById('upg-cost-coin').textContent = getCost(lvCoin).toLocaleString();
-    document.getElementById('upg-btn-coin').disabled = coins < getCost(lvCoin);
+    document.getElementById('upg-lvl-kick').textContent = 'Lv.' + lvKick; document.getElementById('upg-val-kick').textContent = getBaseKickPower() + 'm'; document.getElementById('upg-cost-kick').textContent = getCost(lvKick).toLocaleString(); document.getElementById('upg-btn-kick').disabled = coins < getCost(lvKick);
+    document.getElementById('upg-lvl-power').textContent = 'Lv.' + lvPower; document.getElementById('upg-val-power').textContent = '+' + (lvPower * 5) + '%'; document.getElementById('upg-cost-power').textContent = getCost(lvPower).toLocaleString(); document.getElementById('upg-btn-power').disabled = coins < getCost(lvPower);
+    document.getElementById('upg-lvl-event').textContent = 'Lv.' + lvEvent; document.getElementById('upg-val-event').textContent = '+' + (lvEvent * 5) + '%'; document.getElementById('upg-cost-event').textContent = getCost(lvEvent).toLocaleString(); document.getElementById('upg-btn-event').disabled = coins < getCost(lvEvent);
+    document.getElementById('upg-lvl-coin').textContent = 'Lv.' + lvCoin; document.getElementById('upg-val-coin').textContent = '+' + (lvCoin * 10) + '%'; document.getElementById('upg-cost-coin').textContent = getCost(lvCoin).toLocaleString(); document.getElementById('upg-btn-coin').disabled = coins < getCost(lvCoin);
   }
 
   function buyUpgrade(type) {
@@ -340,14 +416,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (type === 'power') { cost = getCost(lvPower); if (coins >= cost) { coins -= cost; lvPower++; localStorage.setItem('soccer_upg_power', lvPower); } }
     if (type === 'event') { cost = getCost(lvEvent); if (coins >= cost) { coins -= cost; lvEvent++; localStorage.setItem('soccer_upg_event', lvEvent); } }
     if (type === 'coin')  { cost = getCost(lvCoin);  if (coins >= cost) { coins -= cost; lvCoin++;  localStorage.setItem('soccer_upg_coin', lvCoin); } }
-    localStorage.setItem('soccer_coins', coins.toString());
-    updateCurrencyUI();
+    localStorage.setItem('soccer_coins', coins.toString()); updateCurrencyUI();
   }
 
-  document.getElementById('upg-btn-kick')?.addEventListener('click', () => buyUpgrade('kick'));
-  document.getElementById('upg-btn-power')?.addEventListener('click', () => buyUpgrade('power'));
-  document.getElementById('upg-btn-event')?.addEventListener('click', () => buyUpgrade('event'));
-  document.getElementById('upg-btn-coin')?.addEventListener('click', () => buyUpgrade('coin'));
+  document.getElementById('upg-btn-kick')?.addEventListener('click', () => buyUpgrade('kick')); document.getElementById('upg-btn-power')?.addEventListener('click', () => buyUpgrade('power'));
+  document.getElementById('upg-btn-event')?.addEventListener('click', () => buyUpgrade('event')); document.getElementById('upg-btn-coin')?.addEventListener('click', () => buyUpgrade('coin'));
 
   let bestDistance = parseFloat(localStorage.getItem('soccer_3d_best_distance') || '0');
   if (bestDistanceEl) bestDistanceEl.textContent = bestDistance.toFixed(1) + ' m';
@@ -356,11 +429,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // SKIN SHOP SYSTEM
   // ============================================================
   let currentSkin = localStorage.getItem('soccer_skin') || 'basic';
+  // ============================================================
+  // SKIN SHOP SYSTEM (환생 전용 블랙홀 스킨 추가)
+  // ============================================================
+  let currentSkin = localStorage.getItem('soccer_skin') || 'basic';
   const SKINS = {
     basic:   { name: '기본 공', req: 0, bonus: 0, desc: '보유 효과: 없음' },
     rainbow: { name: '🌈 무지개 공', req: 100000, bonus: 0.1, desc: '보유 효과: 킥 파워 +10%' },
     bullet:  { name: '🚀 총알 공', req: 1000000, bonus: 0.5, desc: '보유 효과: 킥 파워 +50%' },
-    flame:   { name: '🔥 불타는 공', req: 10000000, bonus: 1.0, desc: '보유 효과: 킥 파워 +100%' }
+    flame:   { name: '🔥 불타는 공', req: 10000000, bonus: 1.0, desc: '보유 효과: 킥 파워 +100%' },
+    blackhole:{ name: '🌌 블랙홀 공', req: 999999999, bonus: 5.0, desc: '보유 효과: 킥 파워 +500% (환생 전용)' }
   };
 
   function getSkinPowerBonus() {
@@ -368,13 +446,12 @@ document.addEventListener('DOMContentLoaded', () => {
     if (bestDistance >= SKINS.rainbow.req) bonus += SKINS.rainbow.bonus;
     if (bestDistance >= SKINS.bullet.req) bonus += SKINS.bullet.bonus;
     if (bestDistance >= SKINS.flame.req) bonus += SKINS.flame.bonus;
+    if (rebirthCount > 0) bonus += SKINS.blackhole.bonus; // 환생 유저는 무조건 블랙홀 보너스 적용!
     return bonus;
   }
 
   const skinModalEl = document.getElementById('skin-modal');
-  document.getElementById('skin-tab-btn')?.addEventListener('click', () => {
-    skinModalEl?.classList.remove('hidden'); renderSkinList();
-  });
+  document.getElementById('skin-tab-btn')?.addEventListener('click', () => { skinModalEl?.classList.remove('hidden'); renderSkinList(); });
   document.getElementById('skin-close-btn')?.addEventListener('click', () => skinModalEl?.classList.add('hidden'));
 
   function renderSkinList() {
@@ -384,13 +461,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     Object.keys(SKINS).forEach(key => {
       const s = SKINS[key];
-      const isUnlocked = bestDistance >= s.req;
+      // 블랙홀 스킨은 환생 1회 이상이면 무조건 해금!
+      const isUnlocked = key === 'blackhole' ? (rebirthCount > 0) : (bestDistance >= s.req);
       const isEquipped = currentSkin === key;
       
       const item = document.createElement('div');
-      item.className = 'ranking-item';
-      item.style.flexDirection = 'column';
-      item.style.gap = '8px';
+      item.className = 'ranking-item'; item.style.flexDirection = 'column'; item.style.gap = '8px';
       
       item.innerHTML = `
         <div style="display:flex; justify-content:space-between; width:100%; font-weight:bold;">
@@ -398,17 +474,15 @@ document.addEventListener('DOMContentLoaded', () => {
           <span style="color:#38bdf8; font-size:0.8rem;">${s.desc}</span>
         </div>
         <div style="display:flex; justify-content:space-between; width:100%; font-size:0.75rem; color:#94a3b8; align-items:center;">
-          해제: ${s.req === 0 ? '기본 제공' : (s.req.toLocaleString() + 'm 이상')}
+          해제: ${key === 'blackhole' ? '환생 1회 이상' : (s.req === 0 ? '기본 제공' : (s.req.toLocaleString() + 'm 이상'))}
           <button class="btn-upgrade" style="width:auto; padding:6px 12px; font-size:0.8rem; background:${isEquipped ? '#22c55e' : (isUnlocked ? '#3b82f6' : '#475569')}" ${isUnlocked ? '' : 'disabled'}>
             ${isEquipped ? '장착 중' : (isUnlocked ? '장착하기' : '잠김')}
           </button>
         </div>
       `;
-      
       if (isUnlocked && !isEquipped) {
         item.querySelector('button').addEventListener('click', () => {
-          currentSkin = key;
-          localStorage.setItem('soccer_skin', currentSkin);
+          currentSkin = key; localStorage.setItem('soccer_skin', currentSkin);
           applySkin(); renderSkinList();
         });
       }
@@ -961,9 +1035,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  let hasBlackholeEvent = false; let cpBlackholeTriggered = false;
+
   function triggerBallLaunch() {
     let pFactor = power / 100;
-    pFactor = pFactor * (1 + (lvPower * 0.05) + getSkinPowerBonus()); 
+    
+    // 🌟 슈퍼 파워(lvSuperPower) 보너스 곱연산 (레벨당 파워 +100% 폭풍 증가)
+    pFactor = pFactor * (1 + (lvPower * 0.05) + getSkinPowerBonus()) * (1 + (lvSuperPower * 1.0)); 
 
     if (Math.random() < 0.5) { pFactor *= 2.0; showEventBanner('🔥', `강화킥 발동! 파워 2배!`); }
     
@@ -973,6 +1051,10 @@ document.addEventListener('DOMContentLoaded', () => {
     hasJetpackEvent  = Math.random() < 0.5; hasAirplaneEvent = Math.random() < 0.5; hasEagleEvent    = Math.random() < 0.5;
     hasWindEvent     = Math.random() < 0.5; hasRocketEvent   = Math.random() < 0.5; hasMoleEvent     = Math.random() < 0.5;
     hasHeadwindEvent = Math.random() < 0.3; hasSecondKickEvent = Math.random() < 0.5;
+    
+    // 🌟 환생을 한 번이라도 했다면 25% 확률로 우주의 기운 블랙홀 이벤트 발동!
+    hasBlackholeEvent = (rebirthCount > 0 && Math.random() < 0.25);
+    cpBlackholeTriggered = false;
     
     const baseEventBonus = Math.max(1, Math.round(getBaseKickPower() * 0.5 * pFactor));
     eventBonus = Math.round(baseEventBonus * (1 + (lvEvent * 0.05))); 
@@ -989,11 +1071,16 @@ document.addEventListener('DOMContentLoaded', () => {
     ballRot.x = ballVel.z * 0.1;
     isGrounded = false;
     playKickSound(pFactor); gameState = STATES.FLYING;
+
+    // 🌟 스타팅 워프 발동 (시작하자마자 엄청난 거리를 스킵)
+    if (lvStartingWarp > 0) {
+      const warpDist = lvStartingWarp * 10000;
+      ballMesh.position.z = -warpDist; // 즉시 공간이동
+      totalTargetDistance += warpDist;
+      showEventBanner('🌠', `스타팅 워프! ${warpDist.toLocaleString()}m 스킵!`);
+    }
   }
 
-  // ============================================================
-  // PHYSICS UPDATE (Fixed Timestep)
-  // ============================================================
   function updatePhysics(dt) {
     if (gameState === STATES.CHARGING) {
       power += POWER_SPEED * dt; if (power >= 100) power = power % 100;
@@ -1008,8 +1095,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (gameState === STATES.FLYING) {
       ballVel.y -= 25.0 * dt;
       const altitude = Math.max(0, ballMesh.position.y);
-      const baseDrag = 0.996; 
-      const airDrag = Math.min(0.9995, baseDrag + (altitude * 0.00002)); 
+      const airDrag = Math.min(0.9995, 0.996 + (altitude * 0.00002)); 
 
       ballVel.z *= Math.pow(airDrag, dt * 60); ballVel.x *= Math.pow(airDrag, dt * 60);
       ballMesh.position.x += ballVel.x * dt; ballMesh.position.y += ballVel.y * dt; ballMesh.position.z += ballVel.z * dt;
@@ -1056,6 +1142,20 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isEagleCarrying) {
         eagleTimer += dt * 1.5; eagleGroup.position.copy(ballMesh.position); eagleGroup.position.y += 0.4; eagleGroup.rotation.z = Math.sin(eagleTimer * 10) * 0.1;
         if (eagleTimer >= 1.2) { isEagleCarrying = false; eagleGroup.position.y += dt * 20; setTimeout(() => { eagleGroup.visible = false; }, 800); }
+      }
+
+      // 🌟 환생 전용 블랙홀 특수 이벤트 발동!
+      if (hasBlackholeEvent && !cpBlackholeTriggered && cZ <= -(totalTargetDistance * 0.60)) {
+        cpBlackholeTriggered = true;
+        // 슈퍼 파워에 비례해서 미친듯한 웜홀 스킵 발생!
+        const jump = 50000 * (1 + lvSuperPower); 
+        showEventBanner('🌀', `블랙홀 흡수! ${jump.toLocaleString()}m 워프!`);
+        totalTargetDistance += jump;
+        
+        // 슉! 하고 공간이동
+        ballMesh.position.z -= jump;
+        ballVel.z -= 50.0; // 워프 후 추진력 리필
+        ballVel.y += 20.0;
       }
 
       if (hasWindEvent && !cpWindTriggered && cZ <= -(totalTargetDistance * (2/3))) {
@@ -1253,7 +1353,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================================
   function handleGameOver(finalDistance) {
     playWhistleSound();
-    const baseEarned = Math.floor(finalDistance); const earned = Math.floor(baseEarned * (1 + (lvCoin * 0.1)));
+    const baseEarned = Math.floor(finalDistance); 
+    // 🌟 슈퍼 코인(lvSuperCoin) 레벨당 코인 획득량 500% 폭풍 증가!
+    const earned = Math.floor(baseEarned * (1 + (lvCoin * 0.1)) * (1 + (lvSuperCoin * 5.0)));
     coins += earned; localStorage.setItem('soccer_coins', coins.toString());
 
     let isNewBest = false;
