@@ -1072,6 +1072,11 @@ document.addEventListener('DOMContentLoaded', () => {
           // 🌟 처음 찰 때와 완벽히 동일한 풀파워(업그레이드+스킨 보너스)를 다시 계산!
           let pFactor = power / 100;
           pFactor = pFactor * (1 + (lvPower * 0.05) + getSkinPowerBonus());
+          // 🌟 추가된 핵심 로직: 
+          // 공중 이벤트(제트팩 등)가 없어서 빨리 떨어지는 것을 막기 위해,
+          // 세컨드 킥은 발사 파워 자체를 무조건 2.5배로 증폭시켜 하늘 끝까지 날려버립니다!
+          pFactor *= 2.5;
+          
           const maxKickPower = getBaseKickPower();
           const sf = maxKickPower / 100;
           
