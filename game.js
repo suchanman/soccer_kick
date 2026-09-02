@@ -575,11 +575,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const bulletBody = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.6, 16), new THREE.MeshStandardMaterial({color:'#cbd5e1', metalness:0.8, roughness:0.2})); bulletBody.rotation.x = Math.PI/2; bulletBody.castShadow = true;
   const bulletTip = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.3, 16), new THREE.MeshStandardMaterial({color:'#94a3b8', metalness:0.9, roughness:0.1})); bulletTip.position.z = 0.45; bulletTip.rotation.x = Math.PI/2; bulletTip.castShadow = true;
   const bulletBack = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.1, 16), new THREE.MeshStandardMaterial({color:'#f59e0b', metalness:0.8})); bulletBack.position.z = -0.35; bulletBack.rotation.x = Math.PI/2; bulletGroup.add(bulletBody, bulletTip, bulletBack);
-  const flameBall = basicBall.clone();
+  
+  // 🌟 불타는 공 재질 (자체 발광 붉은색)
+  const flameBall = new THREE.Mesh(new THREE.SphereGeometry(BALL_RADIUS, 32, 32), new THREE.MeshStandardMaterial({ color: '#ff4500', emissive: '#ff0000', emissiveIntensity: 0.6, roughness: 0.2 })); flameBall.castShadow = true; flameBall.receiveShadow = true;
+  // 🌟 블랙홀 공 재질 (자체 발광 심연의 보라색)
+  const blackholeBall = new THREE.Mesh(new THREE.SphereGeometry(BALL_RADIUS, 32, 32), new THREE.MeshStandardMaterial({ color: '#000000', emissive: '#6b21a8', emissiveIntensity: 0.9, roughness: 0.1 })); blackholeBall.castShadow = true; blackholeBall.receiveShadow = true;
 
   function applySkin() {
     while(ballMesh.children.length > 0) ballMesh.remove(ballMesh.children[0]);
-    if (currentSkin === 'rainbow') ballMesh.add(rainbowBall); else if (currentSkin === 'bullet') ballMesh.add(bulletGroup); else if (currentSkin === 'flame') ballMesh.add(flameBall); else ballMesh.add(basicBall);
+    if (currentSkin === 'rainbow') ballMesh.add(rainbowBall); 
+    else if (currentSkin === 'bullet') ballMesh.add(bulletGroup); 
+    else if (currentSkin === 'flame') ballMesh.add(flameBall); 
+    else if (currentSkin === 'blackhole') ballMesh.add(blackholeBall); // 🌟 블랙홀 공 추가!
+    else ballMesh.add(basicBall);
   }
   applySkin();
 
@@ -613,21 +621,29 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================================
   // MULTI-TRAIL SYSTEM 
   // ============================================================
-  const MAX_TRAILS = 100; const trailParticles = []; const trailPool = { rainbow: [], bullet: [], basic: [], flame: [] }; const trailGroup = new THREE.Group(); scene.add(trailGroup);
+  // ============================================================
+  // MULTI-TRAIL SYSTEM 
+  // ============================================================
+  const MAX_TRAILS = 100; const trailParticles = []; const trailPool = { rainbow: [], bullet: [], basic: [], flame: [], blackhole: [] }; const trailGroup = new THREE.Group(); scene.add(trailGroup);
   function getTrailMesh(type) {
     if (trailPool[type] && trailPool[type].length > 0) return trailPool[type].pop();
     let mesh;
     if (type === 'rainbow') { const cols = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#a855f7']; mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshBasicMaterial({ color: cols[0], transparent: true, opacity: 0.8 })); } 
     else if (type === 'bullet') { mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.6 })); } 
-    else { mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshBasicMaterial({ color: '#ff4500', transparent: true, opacity: 0.9 })); }
+    else if (type === 'flame') { mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshBasicMaterial({ color: '#ff4500', transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending })); } // 🌟 불꽃은 밝게 합성!
+    else if (type === 'blackhole') { mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshBasicMaterial({ color: '#10002b', transparent: true, opacity: 0.9 })); } // 🌟 블랙홀은 어두운 보라색/검은색
+    else { mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshBasicMaterial({ color: '#ffcc00', transparent: true, opacity: 0.9 })); }
     mesh.userData.type = type; return mesh;
   }
   function createTrailParticle(pos) {
     if (trailParticles.length >= MAX_TRAILS) return;
     const type = currentSkin; const mesh = getTrailMesh(type); let decay = 0.05;
-    if (type === 'rainbow' || type === 'basic' || type === 'flame') {
+    if (type === 'rainbow' || type === 'basic' || type === 'flame' || type === 'blackhole') {
       const scale = Math.random() * 0.15 + 0.1; mesh.scale.set(scale, scale, scale);
-      if (type === 'rainbow') { const cols = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#a855f7']; mesh.material.color.set(cols[Math.floor(Math.random() * cols.length)]); } else { mesh.material.color.set(Math.random() > 0.5 ? '#ff4500' : '#ffcc00'); }
+      if (type === 'rainbow') { const cols = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#a855f7']; mesh.material.color.set(cols[Math.floor(Math.random() * cols.length)]); } 
+      else if (type === 'flame') { mesh.material.color.set(Math.random() > 0.5 ? '#ff0000' : '#facc15'); decay = 0.06; } // 🔥 빨강 노랑 섞임
+      else if (type === 'blackhole') { mesh.material.color.set(Math.random() > 0.5 ? '#000000' : '#a855f7'); decay = 0.03; } // 🌌 검정 보라 섞임 (천천히 사라짐)
+      else { mesh.material.color.set(Math.random() > 0.5 ? '#ff4500' : '#ffcc00'); }
     } else if (type === 'bullet') { mesh.scale.set(1, 1, 1); mesh.rotation.copy(ballMesh.rotation); mesh.position.z += Math.random() * 0.2; decay = 0.08; }
     mesh.position.copy(pos); if(type !== 'bullet') { mesh.position.x += (Math.random()-0.5)*0.2; mesh.position.y += (Math.random()-0.5)*0.2; mesh.position.z += (Math.random()-0.5)*0.2; }
     mesh.material.opacity = 0.8; trailGroup.add(mesh); trailParticles.push({ mesh: mesh, life: 1.0, decay: decay });
@@ -773,7 +789,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function updateVisuals() {
     if (gameState === STATES.CHARGING) updatePowerUI();
     if (gameState === STATES.FLYING && !hasTouchedGround) { if (currentSkin !== 'basic' || isFireballMode) createTrailParticle(ballMesh.position); }
-    if (isJetpackAttached) createTrailParticle(jetpackGroup.position); if (isRocketPushing) createTrailParticle(rocketGroup.position); if (currentSkin === 'flame' && Math.random() < 0.5) createTrailParticle(ballMesh.position);
+    
+    // 🌟 불타는 공과 블랙홀 공은 평소에도 파티클(잔상)을 미친듯이 뿜어냅니다!
+    if (isJetpackAttached) createTrailParticle(jetpackGroup.position); 
+    if (isRocketPushing) createTrailParticle(rocketGroup.position); 
+    if (currentSkin === 'flame' && Math.random() < 0.6) createTrailParticle(ballMesh.position);
+    if (currentSkin === 'blackhole' && Math.random() < 0.8) createTrailParticle(ballMesh.position); // 블랙홀은 다크매터를 더 많이 뿜어냄
     for (let i = trailParticles.length - 1; i >= 0; i--) {
       const tp = trailParticles[i]; tp.life -= tp.decay;
       if (currentSkin === 'bullet') tp.mesh.scale.set(tp.life, 1, tp.life); else tp.mesh.scale.multiplyScalar(0.92);
