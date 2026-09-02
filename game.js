@@ -21,7 +21,33 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error("오류: #gameCanvas 요소를 찾을 수 없습니다.");
     return;
   }
+// ============================================================
+  // 동적 UI 요소 주입 (고도계 및 스피드 라인 이펙트)
+  // ============================================================
+  const style = document.createElement('style');
+  style.innerHTML = `
+    #hud-altitude { 
+      position: absolute; top: 70px; right: 20px; 
+      color: #38bdf8; font-size: 1.2rem; font-weight: 900; 
+      text-shadow: 2px 2px 0 #000; z-index: 10; transition: color 0.3s; 
+    }
+    #speed-lines-overlay { 
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+      pointer-events: none; z-index: 5; opacity: 0; transition: opacity 0.1s;
+      background: repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg, transparent 5deg, rgba(255,255,255,0.2) 5.1deg, rgba(255,255,255,0.2) 5.4deg, transparent 5.5deg, transparent 10deg);
+      mix-blend-mode: overlay;
+    }
+  `;
+  document.head.appendChild(style);
 
+  const altEl = document.createElement('div');
+  altEl.id = 'hud-altitude';
+  altEl.textContent = '고도: 0.0 m';
+  document.body.appendChild(altEl);
+
+  const speedLinesEl = document.createElement('div');
+  speedLinesEl.id = 'speed-lines-overlay';
+  document.body.appendChild(speedLinesEl);
   // ============================================================
   // FIREBASE CONFIG
   // ============================================================
@@ -397,6 +423,48 @@ document.addEventListener('DOMContentLoaded', () => {
   const targetCamLookAt = new THREE.Vector3();
 
   // ============================================================
+  // 🌟 고도 환경 요소 (별, 구름, UFO, 인공위성) 추가
+  // ============================================================
+  const starsGeo = new THREE.BufferGeometry();
+  const starsCount = 1500;
+  const starsPos = new Float32Array(starsCount * 3);
+  for(let i=0; i<starsCount*3; i+=3) {
+    starsPos[i] = (Math.random() - 0.5) * 1000;
+    starsPos[i+1] = 400 + Math.random() * 2000; // 400m 이상 상공에만 배치
+    starsPos[i+2] = (Math.random() - 0.5) * 1000;
+  }
+  starsGeo.setAttribute('position', new THREE.BufferAttribute(starsPos, 3));
+  const starsMat = new THREE.PointsMaterial({ size: 1.5, color: 0xffffff, transparent: true, opacity: 0 });
+  const starsMesh = new THREE.Points(starsGeo, starsMat);
+  scene.add(starsMesh);
+
+  const cloudsGroup = new THREE.Group();
+  const cloudGeo = new THREE.SphereGeometry(4, 8, 8);
+  const cloudMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.8 });
+  for(let i=0; i<8; i++) {
+    const cloud = new THREE.Mesh(cloudGeo, cloudMat);
+    cloud.position.set((Math.random()-0.5)*40, 80 + Math.random()*40, (Math.random()-0.5)*40);
+    cloud.scale.set(1 + Math.random(), 0.3, 1 + Math.random());
+    cloudsGroup.add(cloud);
+  }
+  scene.add(cloudsGroup);
+
+  const ufoGroup = new THREE.Group();
+  const ufoDisk = new THREE.Mesh(new THREE.CylinderGeometry(5, 5, 0.5, 16), new THREE.MeshStandardMaterial({ color: '#94a3b8', metalness: 0.9 }));
+  const ufoDome = new THREE.Mesh(new THREE.SphereGeometry(2, 16, 16), new THREE.MeshStandardMaterial({ color: '#22d3ee', transparent: true, opacity: 0.7 }));
+  ufoDome.position.y = 1;
+  ufoGroup.add(ufoDisk, ufoDome);
+  ufoGroup.position.set(15, 500, 0); // 500m 위치
+  scene.add(ufoGroup);
+
+  const satGroup = new THREE.Group();
+  const satBody = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 4, 8), new THREE.MeshStandardMaterial({ color: '#cbd5e1' }));
+  const satPanel = new THREE.Mesh(new THREE.BoxGeometry(10, 0.2, 2), new THREE.MeshStandardMaterial({ color: '#1d4ed8', metalness: 0.5 }));
+  satGroup.add(satBody, satPanel);
+  satGroup.position.set(-15, 1000, 0); // 1000m 위치
+  scene.add(satGroup);
+  
+  // ============================================================
   // PROCEDURAL TEXTURES
   // ============================================================
   function createGrassTexture() {
@@ -742,6 +810,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let isFireballMode = false;
   let hasTouchedGround = false;
 
+  // 고도 돌파 이벤트 플래그
+  let alt200Triggered = false;
+  let alt500Triggered = false;
+  let alt1000Triggered = false;
+  
   let eventBonus = 50; let eventBonusVelScale = 1.0;
   let baseTargetDistance = 0; let totalTargetDistance = 0;
 
@@ -772,6 +845,18 @@ document.addEventListener('DOMContentLoaded', () => {
     ballVel = { x: 0, y: 0, z: 0 }; ballRot = { x: 0 }; isGrounded = true; leftLegPivot.rotation.x = 0; kickAnimProgress = 0;
     isFireballMode = false; hasTouchedGround = false; clearAllTrailParticles();
 
+    // 환경 효과 리셋
+    alt200Triggered = alt500Triggered = alt1000Triggered = false;
+    speedLinesEl.style.opacity = 0;
+    scene.background = new THREE.Color('#87ceeb');
+    scene.fog.color = scene.background;
+    scene.fog.density = 0.0025;
+    starsMat.opacity = 0;
+    camera.fov = 55;
+    camera.updateProjectionMatrix();
+    if (altEl) altEl.textContent = '고도: 0.0 m';
+
+    
     hasJetpackEvent = hasAirplaneEvent = hasEagleEvent = false;
     hasWindEvent = hasRocketEvent = hasMoleEvent = false;
     hasHeadwindEvent = false; hasSecondKickEvent = false;
@@ -986,6 +1071,9 @@ document.addEventListener('DOMContentLoaded', () => {
   // ============================================================
   // VISUALS & UI UPDATE (프레임당 1회 실행)
   // ============================================================
+  // ============================================================
+  // VISUALS & UI UPDATE (프레임당 1회 실행)
+  // ============================================================
   function updateVisuals() {
     if (gameState === STATES.CHARGING) updatePowerUI();
 
@@ -996,7 +1084,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (isRocketPushing) createTrailParticle(rocketGroup.position);
     if (currentSkin === 'flame' && Math.random() < 0.5) createTrailParticle(ballMesh.position);
     
-    // 파티클 상태 업데이트 및 풀 반환 처리
     for (let i = trailParticles.length - 1; i >= 0; i--) {
       const tp = trailParticles[i];
       tp.life -= tp.decay;
@@ -1010,22 +1097,74 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
 
-    if (currentDistanceEl) currentDistanceEl.textContent = Math.abs(ballMesh.position.z).toFixed(1) + ' m';
     if (windParticlesGroup.visible) windParticlesGroup.position.set(ballMesh.position.x, ballMesh.position.y, ballMesh.position.z);
 
-    // ✅ 매 프레임 Vector3를 새로 만들지 않고 캐싱된 객체 활용
+    // 🌟 고도(Y축)에 따른 UI 및 랜드마크 갱신
+    const alt = Math.max(0, ballMesh.position.y);
+    if (altEl) altEl.textContent = '고도: ' + alt.toFixed(1) + ' m';
+    if (currentDistanceEl) currentDistanceEl.textContent = Math.abs(ballMesh.position.z).toFixed(1) + ' m';
+
+    cloudsGroup.position.z = ballMesh.position.z; 
+    ufoGroup.position.z = ballMesh.position.z - 20; ufoGroup.rotation.y += 0.02;
+    satGroup.position.z = ballMesh.position.z - 10; satGroup.rotation.x += 0.01;
+
+    // 🌟 하늘색 -> 우주색 전환
+    const skyCol = new THREE.Color('#87ceeb');
+    const midCol = new THREE.Color('#1e3a8a');
+    const spaceCol = new THREE.Color('#000000');
+    
+    if (alt < 300) {
+      const t = Math.min(alt / 300, 1.0);
+      scene.background = skyCol.lerp(midCol, t);
+      starsMat.opacity = 0;
+      if(altEl) altEl.style.color = '#38bdf8';
+    } else {
+      const t = Math.min((alt - 300) / 700, 1.0);
+      scene.background = midCol.lerp(spaceCol, t);
+      starsMat.opacity = t;
+      if(altEl) altEl.style.color = '#fde047';
+    }
+    
+    scene.fog.color = scene.background;
+    scene.fog.density = 0.0025 * Math.max(0, 1 - (alt/400));
+
+    // 🌟 고도 돌파 배너 띄우기
+    if (alt > 200 && !alt200Triggered) { alt200Triggered = true; showEventBanner('🌤️', '성층권 진입!'); }
+    if (alt > 500 && !alt500Triggered) { alt500Triggered = true; showEventBanner('🌌', '우주 공간 도달!'); }
+    if (alt > 1000 && !alt1000Triggered){ alt1000Triggered = true; showEventBanner('👽', '외계인 조우 구역!'); }
+
+    // 🌟 스피드 라인 이펙트
+    const verticalSpeed = Math.abs(ballVel.y);
+    if (speedLinesEl && gameState === STATES.FLYING) {
+      let spdOp = 0;
+      if (verticalSpeed > 15) spdOp = Math.min((verticalSpeed - 15) / 30, 0.7);
+      speedLinesEl.style.opacity = spdOp;
+    } else if (speedLinesEl) {
+      speedLinesEl.style.opacity = 0;
+    }
+
+    // 🌟 다이내믹 카메라 (FOV와 내려다보는 앵글)
     if (gameState === STATES.FLYING || gameState === STATES.STOPPED) {
+      const tCam = Math.min(alt / 400, 1.0); // 400m 이상이면 1.0
+      
+      const targetFOV = 55 + (tCam * 25);
+      camera.fov = THREE.MathUtils.lerp(camera.fov, targetFOV, 0.1);
+      camera.updateProjectionMatrix();
+
       targetCamPos.set(ballMesh.position.x * 0.5 + 0.3, Math.max(ballMesh.position.y + 2.4, 2.5), ballMesh.position.z + 5.5);
-      targetCamLookAt.set(ballMesh.position.x, ballMesh.position.y + 0.5, ballMesh.position.z - 4.0);
+      const lookYOffset = THREE.MathUtils.lerp(0.5, -15.0, tCam); // 높이 뜨면 바닥을 내려다봄
+      targetCamLookAt.set(ballMesh.position.x, ballMesh.position.y + lookYOffset, ballMesh.position.z - 4.0);
+      
       camera.position.lerp(targetCamPos, 0.08);
       camera.lookAt(targetCamLookAt);
       dirLight.position.set(ballMesh.position.x + 20, 40, ballMesh.position.z + 20);
     } else {
+      camera.fov = THREE.MathUtils.lerp(camera.fov, 55, 0.1);
+      camera.updateProjectionMatrix();
       camera.position.lerp(defaultCamPos, 0.1);
       camera.lookAt(defaultCamTarget);
     }
   }
-
   // ============================================================
   // GAME OVER
   // ============================================================
