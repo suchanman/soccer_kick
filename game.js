@@ -731,8 +731,19 @@
     jetpackGroup.visible = airplaneGroup.visible = eagleGroup.visible = false;
     windParticlesGroup.visible = rocketGroup.visible = moleGroup.visible = false;
     dirLight.position.set(20, 40, 20);
-    currentDistanceEl.textContent = '0.0 m'; startInstructionEl.classList.remove('fade-out');
-    resultModalEl.classList.add('hidden'); eventBannerContainer.innerHTML = '';
+    
+    currentDistanceEl.textContent = '0.0 m';
+    
+    // 🚀 수정된 부분: 튜토리얼을 본 적 없는 뉴비에게만 안내창 띄우기
+    if (!localStorage.getItem('soccer_tutorial_seen')) {
+      startInstructionEl.classList.remove('fade-out');
+    } else {
+      startInstructionEl.classList.add('fade-out');
+    }
+    
+    resultModalEl.classList.add('hidden');
+    
+    eventBannerContainer.innerHTML = '';
     speedMultiplier = 1; speedBtnEl.textContent = '▶▶ 1x'; speedBtnEl.classList.remove('active');
     initChunks();
   }
@@ -743,10 +754,13 @@
   function handlePressStart() {
     if (gameState === STATES.STOPPED) return;
     initAudio();
-    if (gameState === STATES.IDLE) { gameState = STATES.CHARGING; startInstructionEl.classList.add('fade-out'); }
-  }
-  function handlePressEnd() {
-    if (gameState === STATES.CHARGING) { gameState = STATES.KICKING; kickAnimProgress = 0; }
+    if (gameState === STATES.IDLE) {
+      gameState = STATES.CHARGING;
+      startInstructionEl.classList.add('fade-out');
+      
+      // 🚀 추가된 부분: 처음 공을 차는 순간 튜토리얼을 봤다고 로컬 스토리지에 저장!
+      localStorage.setItem('soccer_tutorial_seen', 'true');
+    }
   }
 
   if(kickBtnEl) {
