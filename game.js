@@ -1082,8 +1082,21 @@ document.addEventListener('DOMContentLoaded', () => {
       if (ballMesh.position.y <= BALL_RADIUS) {
         ballMesh.position.y = BALL_RADIUS;
         if (isFireballMode && !hasTouchedGround) { hasTouchedGround = true; clearAllTrailParticles(); }
-        if (Math.abs(ballVel.y) > 2.0) { ballVel.y = -ballVel.y * 0.55; ballVel.z *= 0.78; playBounceSound(); } 
-        else { ballVel.y = 0; isGrounded = true; ballVel.z *= 0.965; ballRot.x = ballVel.z * 0.1; }
+        
+        // 🌟 수정된 부분: 앞으로 가는 힘(Z축)이 다 죽었는데 위아래로만 튀려고 하면 강제로 착지(멈춤)시킴!
+        if (Math.abs(ballVel.z) < 2.0) {
+          ballVel.y = 0; 
+          ballVel.z = 0;
+          isGrounded = true; 
+        } 
+        else if (Math.abs(ballVel.y) > 2.0) { 
+          ballVel.y = -ballVel.y * 0.55; 
+          ballVel.z *= 0.78; 
+          playBounceSound(); 
+        } 
+        else { 
+          ballVel.y = 0; isGrounded = true; ballVel.z *= 0.965; ballRot.x = ballVel.z * 0.1; 
+        }
       }
 
       if (isGrounded && Math.abs(ballVel.z) < 0.3) {
