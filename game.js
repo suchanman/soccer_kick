@@ -1,8 +1,26 @@
 /**
- * 3D Soccer Kick Game (Three.js WebGL Engine) - Final Version
+ * 3D Soccer Kick Game (Three.js WebGL Engine) - Optimized & Refactored
  */
-(function () {
+document.addEventListener('DOMContentLoaded', () => {
   'use strict';
+
+  // ============================================================
+  // THREE.JS LOAD CHECK & CANVAS VALIDATION
+  // ============================================================
+  if (typeof THREE === 'undefined') {
+    document.body.innerHTML = `
+      <div style="display:flex; justify-content:center; align-items:center; width:100vw; height:100vh; background-color:#111; color:#ef4444; font-family:sans-serif; text-align:center;">
+        <h2>오류: Three.js 라이브러리를 불러오지 못했습니다.</h2>
+        <p>인터넷 연결을 확인하거나 잠시 후 다시 시도해주세요.</p>
+      </div>`;
+    return;
+  }
+
+  const canvas = document.getElementById('gameCanvas');
+  if (!canvas) {
+    console.error("오류: #gameCanvas 요소를 찾을 수 없습니다.");
+    return;
+  }
 
   // ============================================================
   // FIREBASE CONFIG
@@ -20,7 +38,7 @@
   let db = null;
   let firebaseEnabled = false;
   try {
-    if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
+    if (typeof firebase !== 'undefined' && firebaseConfig.apiKey !== "YOUR_API_KEY") {
       firebase.initializeApp(firebaseConfig);
       db = firebase.firestore();
       firebaseEnabled = true;
@@ -32,7 +50,7 @@
   let playerNickname = localStorage.getItem('soccer_nickname') || '';
 
   // ============================================================
-  // UI ELEMENT REFS
+  // UI ELEMENT REFS (Optional Chaining applied in usage)
   // ============================================================
   const currentDistanceEl = document.getElementById('current-distance');
   const bestDistanceEl    = document.getElementById('best-distance');
@@ -67,6 +85,7 @@
   // EVENT BANNERS
   // ============================================================
   function showEventBanner(icon, text) {
+    if (!eventBannerContainer) return;
     const banner = document.createElement('div');
     banner.className = 'event-banner-item';
     banner.innerHTML = `<span class="event-banner-icon">${icon}</span><span>${text}</span>`;
@@ -89,28 +108,30 @@
   function initNickname() {
     if (playerNickname) {
       if (nicknameInputEl) nicknameInputEl.value = playerNickname;
-      nicknameModalEl.classList.add('hidden');
+      nicknameModalEl?.classList.add('hidden');
     } else {
-      nicknameModalEl.classList.remove('hidden');
+      nicknameModalEl?.classList.remove('hidden');
     }
   }
 
   function submitNickname() {
+    if (!nicknameInputEl) return;
     const val = nicknameInputEl.value.trim();
     if (val.length > 0) {
       playerNickname = val;
       localStorage.setItem('soccer_nickname', val);
-      nicknameModalEl.classList.add('hidden');
+      nicknameModalEl?.classList.add('hidden');
     } else {
       nicknameInputEl.style.borderColor = 'rgba(239,68,68,0.8)';
       setTimeout(() => { nicknameInputEl.style.borderColor = ''; }, 800);
     }
   }
 
-  nicknameSubmitBtn.addEventListener('click', submitNickname);
-  nicknameInputEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitNickname(); });
+  nicknameSubmitBtn?.addEventListener('click', submitNickname);
+  nicknameInputEl?.addEventListener('keydown', (e) => { if (e.key === 'Enter') submitNickname(); });
 
   async function loadRanking() {
+    if (!rankingListEl) return;
     rankingListEl.innerHTML = '<p class="ranking-loading">불러오는 중...</p>';
     if (!firebaseEnabled) return;
 
@@ -154,8 +175,8 @@
     }
   }
 
-  rankingBtn.addEventListener('click', () => { rankingModalEl.classList.remove('hidden'); loadRanking(); });
-  rankingCloseBtn.addEventListener('click', () => { rankingModalEl.classList.add('hidden'); });
+  rankingBtn?.addEventListener('click', () => { rankingModalEl?.classList.remove('hidden'); loadRanking(); });
+  rankingCloseBtn?.addEventListener('click', () => { rankingModalEl?.classList.add('hidden'); });
 
   // ============================================================
   // AUDIO
@@ -215,18 +236,14 @@
   function getCost(lv) { return Math.floor(100 * Math.pow(1.2, lv)); }
 
   const upgradeModalEl = document.getElementById('upgrade-modal');
-  if(document.getElementById('upgrade-tab-btn')) {
-    document.getElementById('upgrade-tab-btn').addEventListener('click', () => {
-      upgradeModalEl.classList.remove('hidden'); updateCurrencyUI();
-    });
-  }
-  if(document.getElementById('upgrade-close-btn')) {
-    document.getElementById('upgrade-close-btn').addEventListener('click', () => upgradeModalEl.classList.add('hidden'));
-  }
+  document.getElementById('upgrade-tab-btn')?.addEventListener('click', () => {
+    upgradeModalEl?.classList.remove('hidden'); updateCurrencyUI();
+  });
+  document.getElementById('upgrade-close-btn')?.addEventListener('click', () => upgradeModalEl?.classList.add('hidden'));
 
   function updateCurrencyUI() {
-    hudCoinsEl.textContent = coins.toLocaleString();
-    hudKickPowerEl.textContent = getBaseKickPower() + 'm';
+    if (hudCoinsEl) hudCoinsEl.textContent = coins.toLocaleString();
+    if (hudKickPowerEl) hudKickPowerEl.textContent = getBaseKickPower() + 'm';
     
     if(!document.getElementById('upg-current-coins')) return; 
     
@@ -262,13 +279,13 @@
     updateCurrencyUI();
   }
 
-  if(document.getElementById('upg-btn-kick')) document.getElementById('upg-btn-kick').addEventListener('click', () => buyUpgrade('kick'));
-  if(document.getElementById('upg-btn-power')) document.getElementById('upg-btn-power').addEventListener('click', () => buyUpgrade('power'));
-  if(document.getElementById('upg-btn-event')) document.getElementById('upg-btn-event').addEventListener('click', () => buyUpgrade('event'));
-  if(document.getElementById('upg-btn-coin')) document.getElementById('upg-btn-coin').addEventListener('click', () => buyUpgrade('coin'));
+  document.getElementById('upg-btn-kick')?.addEventListener('click', () => buyUpgrade('kick'));
+  document.getElementById('upg-btn-power')?.addEventListener('click', () => buyUpgrade('power'));
+  document.getElementById('upg-btn-event')?.addEventListener('click', () => buyUpgrade('event'));
+  document.getElementById('upg-btn-coin')?.addEventListener('click', () => buyUpgrade('coin'));
 
   let bestDistance = parseFloat(localStorage.getItem('soccer_3d_best_distance') || '0');
-  bestDistanceEl.textContent = bestDistance.toFixed(1) + ' m';
+  if (bestDistanceEl) bestDistanceEl.textContent = bestDistance.toFixed(1) + ' m';
 
   // ============================================================
   // SKIN SHOP SYSTEM
@@ -290,12 +307,10 @@
   }
 
   const skinModalEl = document.getElementById('skin-modal');
-  if(document.getElementById('skin-tab-btn')) {
-    document.getElementById('skin-tab-btn').addEventListener('click', () => {
-      skinModalEl.classList.remove('hidden'); renderSkinList();
-    });
-  }
-  if(document.getElementById('skin-close-btn')) document.getElementById('skin-close-btn').addEventListener('click', () => skinModalEl.classList.add('hidden'));
+  document.getElementById('skin-tab-btn')?.addEventListener('click', () => {
+    skinModalEl?.classList.remove('hidden'); renderSkinList();
+  });
+  document.getElementById('skin-close-btn')?.addEventListener('click', () => skinModalEl?.classList.add('hidden'));
 
   function renderSkinList() {
     const container = document.getElementById('skin-list-container');
@@ -340,24 +355,23 @@
   // SPEED MULTIPLIER
   // ============================================================
   let speedMultiplier = 1;
-  speedBtnEl.addEventListener('click', () => {
+  speedBtnEl?.addEventListener('click', () => {
     speedMultiplier = speedMultiplier === 1 ? 50 : 1;
     speedBtnEl.textContent = speedMultiplier === 1 ? '▶▶ 1x' : '▶▶▶ 50x';
     speedBtnEl.classList.toggle('active', speedMultiplier === 50);
   });
 
   // ============================================================
-  // THREE.JS SETUP
+  // THREE.JS SETUP & OPTIMIZATION
   // ============================================================
-  const canvas   = document.getElementById('gameCanvas');
-  const scene    = new THREE.Scene();
+  const scene  = new THREE.Scene();
   scene.background = new THREE.Color('#87ceeb');
   scene.fog        = new THREE.FogExp2('#87ceeb', 0.0025);
 
   const camera   = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 6000);
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // ✅ Pixel Ratio 제한 (1.5)
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
 
@@ -367,8 +381,8 @@
   const dirLight = new THREE.DirectionalLight('#ffffff', 0.8);
   dirLight.position.set(20, 40, 20);
   dirLight.castShadow = true;
-  dirLight.shadow.mapSize.width  = 2048;
-  dirLight.shadow.mapSize.height = 2048;
+  dirLight.shadow.mapSize.width  = 1024; // ✅ 그림자 해상도 최적화 (2048 -> 1024)
+  dirLight.shadow.mapSize.height = 1024;
   dirLight.shadow.camera.near   = 0.5;
   dirLight.shadow.camera.far    = 150;
   dirLight.shadow.camera.left   = -30;
@@ -376,6 +390,11 @@
   dirLight.shadow.camera.top    = 30;
   dirLight.shadow.camera.bottom = -30;
   scene.add(dirLight);
+
+  // ✅ 카메라 이동 매 프레임 Vector3 할당 방지를 위한 전역 변수
+  const currentCamPos = new THREE.Vector3();
+  const targetCamPos = new THREE.Vector3();
+  const targetCamLookAt = new THREE.Vector3();
 
   // ============================================================
   // PROCEDURAL TEXTURES
@@ -417,60 +436,71 @@
   }
 
   // ============================================================
-  // INFINITE CHUNK SYSTEM
+  // INFINITE CHUNK SYSTEM & GEOMETRY SHARING
   // ============================================================
   const CHUNK_SIZE = 1000;
   const loadedChunks = new Map();
   const groundMaterial = new THREE.MeshStandardMaterial({ map: createGrassTexture(), roughness: 0.8, metalness: 0.1 });
+  const poleMaterial = new THREE.MeshStandardMaterial({ color: '#facc15', metalness: 0.5, roughness: 0.3 });
+
+  // ✅ 공용 Geometry 캐싱 (생성 삭제 최적화)
+  const sharedGroundGeo = new THREE.PlaneGeometry(60, CHUNK_SIZE);
+  const sharedPoleGeo = new THREE.CylinderGeometry(0.06, 0.06, 4.0, 8);
+  const sharedBannerGeo = new THREE.PlaneGeometry(2.5, 1.25);
+  const bannerMatCache = new Map(); // ✅ 텍스처/머테리얼 캐싱
 
   const startGround = new THREE.Mesh(new THREE.PlaneGeometry(60, 20), groundMaterial);
   startGround.rotation.x = -Math.PI / 2; startGround.position.set(0, 0, 5); startGround.receiveShadow = true;
   scene.add(startGround);
 
-  const poleMaterial = new THREE.MeshStandardMaterial({ color: '#facc15', metalness: 0.5, roughness: 0.3 });
+  function getBannerMaterial(dist) {
+    if (bannerMatCache.has(dist)) return bannerMatCache.get(dist);
+    
+    const bc = document.createElement('canvas'); bc.width = 256; bc.height = 128;
+    const bCtx = bc.getContext('2d');
+    bCtx.fillStyle = '#ef4444'; bCtx.fillRect(0, 0, 256, 128);
+    bCtx.strokeStyle = '#fde047'; bCtx.lineWidth = 10; bCtx.strokeRect(0, 0, 256, 128);
+    bCtx.fillStyle = '#ffffff'; bCtx.font = '900 48px Pretendard, sans-serif'; bCtx.textAlign = 'center';
+    
+    if (dist >= 1000) bCtx.fillText((dist / 1000).toFixed(1) + 'km', 128, 80);
+    else bCtx.fillText(dist + 'm', 128, 80);
+
+    const bannerTex = new THREE.CanvasTexture(bc);
+    const bannerMat = new THREE.MeshStandardMaterial({ map: bannerTex, side: THREE.DoubleSide });
+    bannerMatCache.set(dist, bannerMat);
+    return bannerMat;
+  }
 
   function createChunk(chunkIndex) {
     if (loadedChunks.has(chunkIndex)) return;
-    const meshes = []; const disposables = [];
+    const meshes = [];
     const startDist = chunkIndex * CHUNK_SIZE; const centerZ = -(startDist + CHUNK_SIZE / 2);
 
-    const groundGeo = new THREE.PlaneGeometry(60, CHUNK_SIZE);
-    const groundMesh = new THREE.Mesh(groundGeo, groundMaterial);
+    const groundMesh = new THREE.Mesh(sharedGroundGeo, groundMaterial);
     groundMesh.rotation.x = -Math.PI / 2; groundMesh.position.set(0, 0, centerZ); groundMesh.receiveShadow = true;
-    scene.add(groundMesh); meshes.push(groundMesh); disposables.push(groundGeo);
+    scene.add(groundMesh); meshes.push(groundMesh);
 
-    // 500m 간격으로 최적화 완료!
     for (let dist = startDist + 500; dist <= startDist + CHUNK_SIZE; dist += 500) {
       const zPos = -dist;
-      const poleGeo = new THREE.CylinderGeometry(0.06, 0.06, 4.0, 8);
-      const poleMesh = new THREE.Mesh(poleGeo, poleMaterial);
+      const poleMesh = new THREE.Mesh(sharedPoleGeo, poleMaterial);
       poleMesh.position.set(-8.0, 2.0, zPos); poleMesh.castShadow = true;
-      scene.add(poleMesh); meshes.push(poleMesh); disposables.push(poleGeo);
+      scene.add(poleMesh); meshes.push(poleMesh);
 
-      const bc = document.createElement('canvas'); bc.width = 256; bc.height = 128;
-      const bCtx = bc.getContext('2d');
-      bCtx.fillStyle = '#ef4444'; bCtx.fillRect(0, 0, 256, 128);
-      bCtx.strokeStyle = '#fde047'; bCtx.lineWidth = 10; bCtx.strokeRect(0, 0, 256, 128);
-      bCtx.fillStyle = '#ffffff'; bCtx.font = '900 48px Pretendard, sans-serif'; bCtx.textAlign = 'center';
-      
-      if (dist >= 1000) bCtx.fillText((dist / 1000).toFixed(1) + 'km', 128, 80);
-      else bCtx.fillText(dist + 'm', 128, 80);
-
-      const bannerTex = new THREE.CanvasTexture(bc);
-      const bannerMat = new THREE.MeshStandardMaterial({ map: bannerTex, side: THREE.DoubleSide });
-      const bannerGeo = new THREE.PlaneGeometry(2.5, 1.25);
-      const bannerMesh = new THREE.Mesh(bannerGeo, bannerMat);
+      const bannerMat = getBannerMaterial(dist);
+      const bannerMesh = new THREE.Mesh(sharedBannerGeo, bannerMat);
       bannerMesh.position.set(-6.7, 3.2, zPos);
-      scene.add(bannerMesh); meshes.push(bannerMesh); disposables.push(bannerTex, bannerMat, bannerGeo);
+      bannerMesh.castShadow = false; // ✅ 표지판 그림자 제거 (최적화)
+      bannerMesh.receiveShadow = false;
+      scene.add(bannerMesh); meshes.push(bannerMesh);
     }
-    loadedChunks.set(chunkIndex, { meshes, disposables });
+    // Geometries & Materials are shared, no need to track for dispose
+    loadedChunks.set(chunkIndex, meshes);
   }
 
   function removeChunk(chunkIndex) {
-    const data = loadedChunks.get(chunkIndex);
-    if (!data) return;
-    data.meshes.forEach(m => scene.remove(m));
-    data.disposables.forEach(d => { if (d && d.dispose) d.dispose(); });
+    const meshes = loadedChunks.get(chunkIndex);
+    if (!meshes) return;
+    meshes.forEach(m => scene.remove(m));
     loadedChunks.delete(chunkIndex);
   }
 
@@ -628,49 +658,72 @@
   moleNose.position.set(0, 0.5, 0.35); moleGroup.add(moleNose); moleGroup.visible = false; scene.add(moleGroup);
 
   // ============================================================
-  // MULTI-TRAIL SYSTEM (스킨 잔상 효과)
+  // MULTI-TRAIL SYSTEM (객체 풀링 적용, 최대 개수 제한)
   // ============================================================
+  const MAX_TRAILS = 100;
   const trailParticles = [];
+  const trailPool = { rainbow: [], bullet: [], basic: [], flame: [] };
   const trailGroup = new THREE.Group();
   scene.add(trailGroup);
 
-  function createTrailParticle(pos) {
-    let mesh, decay = 0.05;
-    if (currentSkin === 'rainbow') {
-      const cols = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#a855f7'];
-      mesh = new THREE.Mesh(new THREE.SphereGeometry(Math.random()*0.15+0.1, 8, 8), new THREE.MeshBasicMaterial({ color: cols[Math.floor(Math.random()*cols.length)], transparent: true, opacity: 0.8 }));
-    } else if (currentSkin === 'bullet') {
-      mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.6 }));
-      mesh.rotation.copy(ballMesh.rotation); mesh.position.z += Math.random()*0.2; decay = 0.08;
-    } else {
-      mesh = new THREE.Mesh(new THREE.SphereGeometry(Math.random()*0.18+0.08, 8, 8), new THREE.MeshBasicMaterial({ color: Math.random()>0.5?'#ff4500':'#ffcc00', transparent: true, opacity: 0.9 }));
+  function getTrailMesh(type) {
+    if (trailPool[type] && trailPool[type].length > 0) {
+      return trailPool[type].pop();
     }
-    mesh.position.copy(pos);
-    if(currentSkin !== 'bullet') { mesh.position.x += (Math.random()-0.5)*0.2; mesh.position.y += (Math.random()-0.5)*0.2; mesh.position.z += (Math.random()-0.5)*0.2; }
-    trailGroup.add(mesh); trailParticles.push({ mesh: mesh, life: 1.0, decay: decay });
+    let mesh;
+    if (type === 'rainbow') {
+      const cols = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#a855f7'];
+      mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshBasicMaterial({ color: cols[0], transparent: true, opacity: 0.8 }));
+    } else if (type === 'bullet') {
+      mesh = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8), new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.6 }));
+    } else {
+      mesh = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 8), new THREE.MeshBasicMaterial({ color: '#ff4500', transparent: true, opacity: 0.9 }));
+    }
+    mesh.userData.type = type;
+    return mesh;
   }
 
-  function updateTrailParticles() {
-    for (let i = trailParticles.length-1; i >= 0; i--) {
-      const tp = trailParticles[i]; tp.life -= tp.decay;
-      if (currentSkin === 'bullet') tp.mesh.scale.set(tp.life, 1, tp.life); else tp.mesh.scale.multiplyScalar(0.92);
-      tp.mesh.material.opacity = tp.life;
-      if (tp.life <= 0) { 
-        trailGroup.remove(tp.mesh); 
-        // 🚀 핵심 수정: 안 쓰는 파티클의 메모리를 완전히 박살내서 비워줍니다!
-        tp.mesh.geometry.dispose(); 
-        tp.mesh.material.dispose(); 
-        trailParticles.splice(i, 1); 
+  function createTrailParticle(pos) {
+    if (trailParticles.length >= MAX_TRAILS) return;
+    
+    const type = currentSkin;
+    const mesh = getTrailMesh(type);
+    let decay = 0.05;
+
+    if (type === 'rainbow' || type === 'basic' || type === 'flame') {
+      const scale = Math.random() * 0.15 + 0.1;
+      mesh.scale.set(scale, scale, scale);
+      if (type === 'rainbow') {
+        const cols = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#a855f7'];
+        mesh.material.color.set(cols[Math.floor(Math.random() * cols.length)]);
+      } else {
+        mesh.material.color.set(Math.random() > 0.5 ? '#ff4500' : '#ffcc00');
       }
+    } else if (type === 'bullet') {
+      mesh.scale.set(1, 1, 1);
+      mesh.rotation.copy(ballMesh.rotation);
+      mesh.position.z += Math.random() * 0.2;
+      decay = 0.08;
     }
+
+    mesh.position.copy(pos);
+    if(type !== 'bullet') { 
+      mesh.position.x += (Math.random()-0.5)*0.2; 
+      mesh.position.y += (Math.random()-0.5)*0.2; 
+      mesh.position.z += (Math.random()-0.5)*0.2; 
+    }
+    
+    mesh.material.opacity = 0.8;
+    trailGroup.add(mesh);
+    trailParticles.push({ mesh: mesh, life: 1.0, decay: decay });
   }
 
   function clearAllTrailParticles() {
-    trailParticles.forEach(tp => {
+    for (let i = trailParticles.length - 1; i >= 0; i--) {
+      const tp = trailParticles[i];
       trailGroup.remove(tp.mesh);
-      tp.mesh.geometry.dispose(); 
-      tp.mesh.material.dispose();
-    });
+      if (trailPool[tp.mesh.userData.type]) trailPool[tp.mesh.userData.type].push(tp.mesh);
+    }
     trailParticles.length = 0;
   }
 
@@ -732,19 +785,17 @@
     windParticlesGroup.visible = rocketGroup.visible = moleGroup.visible = false;
     dirLight.position.set(20, 40, 20);
     
-    currentDistanceEl.textContent = '0.0 m';
+    if (currentDistanceEl) currentDistanceEl.textContent = '0.0 m';
     
-    // 🚀 수정된 부분: 튜토리얼을 본 적 없는 뉴비에게만 안내창 띄우기
-    if (!localStorage.getItem('soccer_tutorial_seen')) {
-      startInstructionEl.classList.remove('fade-out');
-    } else {
-      startInstructionEl.classList.add('fade-out');
+    if (startInstructionEl) {
+      if (!localStorage.getItem('soccer_tutorial_seen')) startInstructionEl.classList.remove('fade-out');
+      else startInstructionEl.classList.add('fade-out');
     }
     
-    resultModalEl.classList.add('hidden');
-    
-    eventBannerContainer.innerHTML = '';
-    speedMultiplier = 1; speedBtnEl.textContent = '▶▶ 1x'; speedBtnEl.classList.remove('active');
+    resultModalEl?.classList.add('hidden');
+    if (eventBannerContainer) eventBannerContainer.innerHTML = '';
+    speedMultiplier = 1; 
+    if (speedBtnEl) { speedBtnEl.textContent = '▶▶ 1x'; speedBtnEl.classList.remove('active'); }
     initChunks();
   }
 
@@ -756,35 +807,34 @@
     initAudio();
     if (gameState === STATES.IDLE) {
       gameState = STATES.CHARGING;
-      startInstructionEl.classList.add('fade-out');
-      
-      // 🚀 추가된 부분: 처음 공을 차는 순간 튜토리얼을 봤다고 로컬 스토리지에 저장!
+      startInstructionEl?.classList.add('fade-out');
       localStorage.setItem('soccer_tutorial_seen', 'true');
     }
   }
 
-  if(kickBtnEl) {
-    kickBtnEl.addEventListener('pointerdown', handlePressStart);
-    kickBtnEl.addEventListener('pointerup', handlePressEnd);
-    kickBtnEl.addEventListener('pointerleave', () => { if (gameState === STATES.CHARGING) handlePressEnd(); });
+  function handlePressEnd() {
+    if (gameState === STATES.CHARGING) {
+      gameState = STATES.KICKING;
+    }
   }
+
+  kickBtnEl?.addEventListener('pointerdown', handlePressStart);
+  kickBtnEl?.addEventListener('pointerup', handlePressEnd);
+  kickBtnEl?.addEventListener('pointerleave', () => { if (gameState === STATES.CHARGING) handlePressEnd(); });
   window.addEventListener('keydown', (e) => { if (e.code === 'Space' && !e.repeat) handlePressStart(); });
   window.addEventListener('keyup',   (e) => { if (e.code === 'Space') handlePressEnd(); });
-  restartBtn.addEventListener('click', resetGame);
+  restartBtn?.addEventListener('click', resetGame);
 
   // ============================================================
   // POWER GAUGE & LAUNCH
   // ============================================================
-  function updatePower(dt) {
-    if (gameState !== STATES.CHARGING) return;
-    power += POWER_SPEED * dt; if (power >= 100) power = power % 100;
-    updatePowerUI(); leftLegPivot.rotation.x = -(power / 100) * 0.85;
-  }
-
   function updatePowerUI() {
     const p = Math.min(Math.max(Math.floor(power), 0), 100);
-    powerNumberEl.textContent = p + '%'; powerBarEl.style.width = p + '%';
-    powerBarEl.style.boxShadow = p > 85 ? '0 0 20px rgba(255,0,85,0.9)' : p > 60 ? '0 0 15px rgba(234,179,8,0.7)' : '0 0 10px rgba(34,197,94,0.5)';
+    if (powerNumberEl) powerNumberEl.textContent = p + '%';
+    if (powerBarEl) {
+      powerBarEl.style.width = p + '%';
+      powerBarEl.style.boxShadow = p > 85 ? '0 0 20px rgba(255,0,85,0.9)' : p > 60 ? '0 0 15px rgba(234,179,8,0.7)' : '0 0 10px rgba(34,197,94,0.5)';
+    }
   }
 
   function triggerBallLaunch() {
@@ -817,11 +867,15 @@
     playKickSound(pFactor); gameState = STATES.FLYING;
   }
 
- // ============================================================
-  // PHYSICS UPDATE
   // ============================================================
-  // 🚀 핵심 수정: isLastLoop 플래그를 추가해 눈에 보이는 그래픽은 딱 1번만 처리하게 막음!
-  function updatePhysics(dt, isLastLoop = true) {
+  // PHYSICS UPDATE (Fixed Timestep)
+  // ============================================================
+  function updatePhysics(dt) {
+    if (gameState === STATES.CHARGING) {
+      power += POWER_SPEED * dt; if (power >= 100) power = power % 100;
+      leftLegPivot.rotation.x = -(power / 100) * 0.85;
+    }
+    
     if (gameState === STATES.KICKING) {
       kickAnimProgress += dt * 8; leftLegPivot.rotation.x = -0.85 + kickAnimProgress * 1.7;
       if (kickAnimProgress >= 1.0) triggerBallLaunch();
@@ -849,7 +903,6 @@
       }
       if (isJetpackAttached) {
         jetpackGroup.position.copy(ballMesh.position); jetpackGroup.position.z += 0.2; 
-        if (isLastLoop) createTrailParticle(jetpackGroup.position); 
         if (ballVel.y < 0 && !isJetpackDetached) { isJetpackAttached = false; isJetpackDetached = true; jetpackVelY = -2.0; }
       }
       if (isJetpackDetached && jetpackGroup.visible) {
@@ -894,7 +947,6 @@
       }
       if (isRocketPushing) {
         rocketTimer += dt * 1.5; rocketGroup.position.set(ballMesh.position.x, ballMesh.position.y - 0.9, ballMesh.position.z); 
-        if (isLastLoop) createTrailParticle(rocketGroup.position); 
         if (rocketTimer >= 1.2) { isRocketPushing = false; setTimeout(() => { rocketGroup.visible = false; }, 800); }
       }
 
@@ -929,26 +981,48 @@
         setTimeout(() => { handleGameOver(Math.abs(ballMesh.position.z)); }, 1000);
       }
     }
+  }
 
-    // 🚀 눈에 보여지는 시각 효과들은 50번 루프를 다 돌고 딱 마지막(isLastLoop)에만 실행!
-    if (isLastLoop) {
-      if (gameState === STATES.FLYING && !hasTouchedGround) {
-        if (currentSkin !== 'basic' || isFireballMode) createTrailParticle(ballMesh.position);
-      }
-      
-      updateTrailParticles(); 
-      if (currentSkin === 'flame' && Math.random() < 0.5) createTrailParticle(ballMesh.position);
-      
-      currentDistanceEl.textContent = Math.abs(ballMesh.position.z).toFixed(1) + ' m';
-      if (windParticlesGroup.visible) windParticlesGroup.position.set(ballMesh.position.x, ballMesh.position.y, ballMesh.position.z);
+  // ============================================================
+  // VISUALS & UI UPDATE (프레임당 1회 실행)
+  // ============================================================
+  function updateVisuals() {
+    if (gameState === STATES.CHARGING) updatePowerUI();
 
-      if (gameState === STATES.FLYING || gameState === STATES.STOPPED) {
-        const targetCamPos = new THREE.Vector3(ballMesh.position.x * 0.5 + 0.3, Math.max(ballMesh.position.y + 2.4, 2.5), ballMesh.position.z + 5.5);
-        camera.position.lerp(targetCamPos, 0.08); camera.lookAt(new THREE.Vector3(ballMesh.position.x, ballMesh.position.y + 0.5, ballMesh.position.z - 4.0));
-        dirLight.position.set(ballMesh.position.x + 20, 40, ballMesh.position.z + 20);
-      } else {
-        camera.position.lerp(defaultCamPos, 0.1); camera.lookAt(defaultCamTarget);
+    if (gameState === STATES.FLYING && !hasTouchedGround) {
+      if (currentSkin !== 'basic' || isFireballMode) createTrailParticle(ballMesh.position);
+    }
+    if (isJetpackAttached) createTrailParticle(jetpackGroup.position);
+    if (isRocketPushing) createTrailParticle(rocketGroup.position);
+    if (currentSkin === 'flame' && Math.random() < 0.5) createTrailParticle(ballMesh.position);
+    
+    // 파티클 상태 업데이트 및 풀 반환 처리
+    for (let i = trailParticles.length - 1; i >= 0; i--) {
+      const tp = trailParticles[i];
+      tp.life -= tp.decay;
+      if (currentSkin === 'bullet') tp.mesh.scale.set(tp.life, 1, tp.life); else tp.mesh.scale.multiplyScalar(0.92);
+      tp.mesh.material.opacity = tp.life;
+      
+      if (tp.life <= 0) {
+        trailGroup.remove(tp.mesh);
+        if (trailPool[tp.mesh.userData.type]) trailPool[tp.mesh.userData.type].push(tp.mesh);
+        trailParticles.splice(i, 1);
       }
+    }
+
+    if (currentDistanceEl) currentDistanceEl.textContent = Math.abs(ballMesh.position.z).toFixed(1) + ' m';
+    if (windParticlesGroup.visible) windParticlesGroup.position.set(ballMesh.position.x, ballMesh.position.y, ballMesh.position.z);
+
+    // ✅ 매 프레임 Vector3를 새로 만들지 않고 캐싱된 객체 활용
+    if (gameState === STATES.FLYING || gameState === STATES.STOPPED) {
+      targetCamPos.set(ballMesh.position.x * 0.5 + 0.3, Math.max(ballMesh.position.y + 2.4, 2.5), ballMesh.position.z + 5.5);
+      targetCamLookAt.set(ballMesh.position.x, ballMesh.position.y + 0.5, ballMesh.position.z - 4.0);
+      camera.position.lerp(targetCamPos, 0.08);
+      camera.lookAt(targetCamLookAt);
+      dirLight.position.set(ballMesh.position.x + 20, 40, ballMesh.position.z + 20);
+    } else {
+      camera.position.lerp(defaultCamPos, 0.1);
+      camera.lookAt(defaultCamTarget);
     }
   }
 
@@ -963,16 +1037,22 @@
     let isNewBest = false;
     if (finalDistance > bestDistance) {
       bestDistance = finalDistance; localStorage.setItem('soccer_3d_best_distance', bestDistance.toString());
-      bestDistanceEl.textContent = bestDistance.toFixed(1) + ' m'; isNewBest = true;
+      if (bestDistanceEl) bestDistanceEl.textContent = bestDistance.toFixed(1) + ' m';
+      isNewBest = true;
     }
 
-    finalDistanceEl.textContent = finalDistance.toFixed(1) + ' m'; earnedCoinsEl.textContent = '+' + earned.toLocaleString(); updateCurrencyUI();
-    resultBadgeEl.style.display = 'inline-block';
-    if (isNewBest) { resultBadgeEl.textContent = 'NEW BEST RECORD! 🏆'; resultTitleEl.textContent = 'WORLD CLASS!'; } 
-    else if (finalDistance > 300) { resultBadgeEl.textContent = 'SUPER KICK! ⭐'; resultTitleEl.textContent = 'INCREDIBLE!'; } 
-    else { resultBadgeEl.style.display = 'none'; resultTitleEl.textContent = 'GREAT KICK!'; }
+    if (finalDistanceEl) finalDistanceEl.textContent = finalDistance.toFixed(1) + ' m';
+    if (earnedCoinsEl) earnedCoinsEl.textContent = '+' + earned.toLocaleString();
+    updateCurrencyUI();
+    
+    if (resultBadgeEl && resultTitleEl) {
+      resultBadgeEl.style.display = 'inline-block';
+      if (isNewBest) { resultBadgeEl.textContent = 'NEW BEST RECORD! 🏆'; resultTitleEl.textContent = 'WORLD CLASS!'; } 
+      else if (finalDistance > 300) { resultBadgeEl.textContent = 'SUPER KICK! ⭐'; resultTitleEl.textContent = 'INCREDIBLE!'; } 
+      else { resultBadgeEl.style.display = 'none'; resultTitleEl.textContent = 'GREAT KICK!'; }
+    }
 
-    resultModalEl.classList.remove('hidden');
+    resultModalEl?.classList.remove('hidden');
 
     if (firebaseEnabled && playerNickname) {
       if (isNewBest) {
@@ -990,22 +1070,46 @@
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
+  const FIXED_DT = 1 / 60; // 60fps 고정 스텝
+  let accumulator = 0;
   let lastTime = performance.now();
+
   function animate(now) {
     requestAnimationFrame(animate);
-    const rawDt = Math.min((now - lastTime) / 1000, 0.05); lastTime = now;
-    updatePower(rawDt);  
-    const loops = (gameState === STATES.FLYING || gameState === STATES.KICKING) ? speedMultiplier : 1;
     
-    // 🚀 루프를 돌릴 때 마지막 바퀴(i === loops - 1)인지 알려줌
-    for (let i = 0; i < loops; i++) {
-      updatePhysics(rawDt, i === loops - 1);
+    // 탭 전환 등 지연 시 100ms로 dt 상한 제한 (과도한 계산 방지)
+    let dt = (now - lastTime) / 1000;
+    if (dt > 0.1) dt = 0.1;
+    lastTime = now;
+
+    if (gameState === STATES.FLYING || gameState === STATES.KICKING) {
+      dt *= speedMultiplier; // 배속 모드 적용
+    }
+
+    accumulator += dt;
+    
+    // 배속이 너무 클 경우 accumulator 과도 누적 방지 (렉 유발 방지)
+    if (accumulator > 2.0) accumulator = 2.0;
+
+    let steps = 0;
+    while (accumulator >= FIXED_DT) {
+      updatePhysics(FIXED_DT);
+      accumulator -= FIXED_DT;
+      steps++;
+      // 무한 루프 방지 장치 (한 프레임당 최대 물리 연산 횟수 제한)
+      if (steps >= 120) {
+        accumulator = 0;
+        break;
+      }
     }
     
-    updateChunks(); renderer.render(scene, camera);
+    // 시각 효과는 프레임당 1번만 계산
+    updateVisuals();
+    updateChunks();
+    renderer.render(scene, camera);
   }
 
   initNickname();
   resetGame();
   requestAnimationFrame(animate);
-})();
+});
