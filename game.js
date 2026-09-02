@@ -44,11 +44,40 @@ document.addEventListener('DOMContentLoaded', () => {
       left: 20px !important;      /* 화면 왼쪽 끝으로 이동 */
       right: auto !important;
       transform: none !important; /* 기존에 설정된 가운데 정렬 강제 해제 */
-      align-items: flex-start !important; /* 배너들이 왼쪽 벽에 붙어서 뜨게 함 */
+      aalign-items: flex-start !important; 
       pointer-events: none !important;
     }
+    
+    /* 🌟 아이디어 2: 워프 터널 배경 (50배속 전용) */
+    #warp-overlay {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      pointer-events: none; z-index: 4; opacity: 0; transition: opacity 0.5s;
+      background: radial-gradient(circle at center, transparent 20%, #000 100%), 
+                  repeating-conic-gradient(from 0deg, rgba(56, 189, 248, 0.2) 0deg, rgba(56, 189, 248, 0.8) 2deg, transparent 4deg, transparent 10deg);
+      animation: warpSpin 1.5s linear infinite; mix-blend-mode: screen;
+    }
+    @keyframes warpSpin { 100% { transform: scale(2) rotate(360deg); } }
+    
+    /* 🌟 아이디어 1: 탭 부스트 (물결 이펙트 및 코인 텍스트) */
+    .tap-ripple {
+      position: absolute; border: 2px solid #38bdf8; border-radius: 50%;
+      pointer-events: none; z-index: 20; transform: translate(-50%, -50%) scale(0);
+      animation: rippleAnim 0.4s ease-out forwards;
+    }
+    .tap-coin {
+      position: absolute; color: #fde047; font-weight: 900; font-size: 1.5rem; text-shadow: 1px 1px 0 #000;
+      pointer-events: none; z-index: 20; transform: translate(-50%, -50%);
+      animation: coinAnim 0.6s ease-out forwards;
+    }
+    @keyframes rippleAnim { 100% { transform: translate(-50%, -50%) scale(3); opacity: 0; } }
+    @keyframes coinAnim { 0% { opacity: 1; margin-top: 0; } 100% { opacity: 0; margin-top: -50px; } }
   `;
   document.head.appendChild(style);
+
+  // 워프 배경 요소를 화면에 주입
+  const warpEl = document.createElement('div');
+  warpEl.id = 'warp-overlay';
+  document.body.appendChild(warpEl);
 
   const altEl = document.createElement('div');
   altEl.id = 'hud-altitude';
@@ -1184,9 +1213,18 @@ document.addEventListener('DOMContentLoaded', () => {
       camera.updateProjectionMatrix();
 
       targetCamPos.set(ballMesh.position.x * 0.5 + 0.3, Math.max(ballMesh.position.y + 2.4, 2.5), ballMesh.position.z + 5.5);
-      const lookYOffset = THREE.MathUtils.lerp(0.5, -15.0, tCam); // 높이 뜨면 바닥을 내려다봄
+      const lookYOffset = THREE.MathUtils.lerp(0.5, -15.0, tCam); 
       targetCamLookAt.set(ballMesh.position.x, ballMesh.position.y + lookYOffset, ballMesh.position.z - 4.0);
       
+      // 🌟 아이디어 2: 50배속 시 광속 워프 터널 ON & 거친 카메라 진동!
+      if (gameState === STATES.FLYING && speedMultiplier === 50 && !hasTouchedGround) {
+        warpEl.style.opacity = 0.8;
+        targetCamPos.x += (Math.random() - 0.5) * 1.5; // 지진이 난 듯 덜컹거리는 카메라
+        targetCamPos.y += (Math.random() - 0.5) * 1.5;
+      } else {
+        warpEl.style.opacity = 0;
+      }
+
       camera.position.lerp(targetCamPos, 0.08);
       camera.lookAt(targetCamLookAt);
       dirLight.position.set(ballMesh.position.x + 20, 40, ballMesh.position.z + 20);
@@ -1234,8 +1272,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // 🌟 아이디어 1: 비행 중 화면 탭하면 부스트 & 코인 즉시 획득!
+  window.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('button') || e.target.closest('.modal')) return; // UI 클릭 무시
+    
+    if (gameState === STATES.FLYING && !hasTouchedGround) {
+      const bonusCoin = speedMultiplier === 50 ? 50 : 1; // 50배속이면 탭 한 번에 코인 50개씩 팍팍!
+      coins += bonusCoin;
+      updateCurrencyUI();
+      
+      // 물리적 부스트 부여 (배속에 비례해서 미친듯이 앞으로 밀어줌)
+      ballVel.z -= 1.0 * speedMultiplier;
+      ballVel.y += 0.5 * speedMultiplier;
+      
+      // 마우스(터치) 위치에 이펙트 및 코인 텍스트 생성
+      const ripple = document.createElement('div');
+      ripple.className = 'tap-ripple';
+      ripple.style.left = e.clientX + 'px';
+      ripple.style.top = e.clientY + 'px';
+      
+      const coinText = document.createElement('div');
+      coinText.className = 'tap-coin';
+      coinText.textContent = '+' + bonusCoin;
+      coinText.style.left = e.clientX + 'px';
+      coinText.style.top = (e.clientY - 20) + 'px';
+      
+      document.body.appendChild(ripple);
+      document.body.appendChild(coinText);
+      
+      setTimeout(() => { ripple.remove(); coinText.remove(); }, 600);
+    }
+  });
+
   // ============================================================
-  // ANIMATION LOOP & INIT
+  // ANIMATION LOOP
   // ============================================================
   window.addEventListener('resize', () => {
     camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); renderer.setSize(window.innerWidth, window.innerHeight);
