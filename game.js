@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // ============================================================
   // 동적 UI 요소 주입 (고도계 및 스피드 라인 이펙트)
   // ============================================================
-  const style = document.createElement('style');
+ const style = document.createElement('style');
   style.innerHTML = `
     #hud-altitude { 
       position: absolute; top: 70px; right: 20px; 
@@ -36,6 +36,16 @@ document.addEventListener('DOMContentLoaded', () => {
       pointer-events: none; z-index: 5; opacity: 0; transition: opacity 0.1s;
       background: repeating-conic-gradient(from 0deg at 50% 50%, transparent 0deg, transparent 5deg, rgba(255,255,255,0.2) 5.1deg, rgba(255,255,255,0.2) 5.4deg, transparent 5.5deg, transparent 10deg);
       mix-blend-mode: overlay;
+    }
+    /* 🌟 추가된 부분: 이벤트 팝업창을 중앙에서 왼쪽으로 치워줍니다! */
+    #event-banner-container {
+      position: absolute !important;
+      top: 30% !important;        /* 화면 위에서 30% 정도 내려온 위치 */
+      left: 20px !important;      /* 화면 왼쪽 끝으로 이동 */
+      right: auto !important;
+      transform: none !important; /* 기존에 설정된 가운데 정렬 강제 해제 */
+      align-items: flex-start !important; /* 배너들이 왼쪽 벽에 붙어서 뜨게 함 */
+      pointer-events: none !important;
     }
   `;
   document.head.appendChild(style);
