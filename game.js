@@ -1243,6 +1243,9 @@
   // ============================================================
   // ANIMATION LOOP
   // ============================================================
+  // ============================================================
+  // ANIMATION LOOP
+  // ============================================================
   let lastTime = performance.now();
 
   function animate(now) {
@@ -1251,20 +1254,18 @@
     const rawDt = Math.min((now - lastTime) / 1000, 0.05);
     lastTime = now;
 
-    // Speed multiplier only applies during KICKING / FLYING states
-    const physDt = rawDt * (
-      gameState === STATES.FLYING || gameState === STATES.KICKING
-        ? speedMultiplier
-        : 1
-    );
+    updatePower(rawDt);   // 파워 게이지는 항상 1배속으로 정상 작동
 
-    updatePower(rawDt);   // Power gauge always at normal speed
-    updatePhysics(physDt);
+    // 🚀 수정된 배속 원리: 물리 연산 횟수를 배속만큼 늘려서 '빠르게 감기'
+    const loops = (gameState === STATES.FLYING || gameState === STATES.KICKING) ? speedMultiplier : 1;
+    
+    for (let i = 0; i < loops; i++) {
+      updatePhysics(rawDt); // 시간을 뻥튀기하지 않고, 정상 시간으로 여러 번 쪼개서 연산!
+    }
+
     updateChunks();
-
     renderer.render(scene, camera);
   }
-
   // ============================================================
   // INIT
   // ============================================================
