@@ -478,7 +478,7 @@
     return new THREE.CanvasTexture(c);
   }
 
-  // ============================================================
+ // ============================================================
   // INFINITE CHUNK SYSTEM
   // ============================================================
   const CHUNK_SIZE = 1000; // metres per chunk
@@ -491,29 +491,29 @@
     metalness: 0.1
   });
 
-  // Small fixed starting ground (covers camera area z=+10 to z=0)
+  // Small fixed starting ground
   const startGround = new THREE.Mesh(
     new THREE.PlaneGeometry(60, 20),
     groundMaterial
   );
   startGround.rotation.x = -Math.PI / 2;
-  startGround.position.set(0, 0, 5); // z: -5 to +15
+  startGround.position.set(0, 0, 5);
   startGround.receiveShadow = true;
   scene.add(startGround);
 
-  // Shared pole material (reused across chunks)
+  // Shared pole material
   const poleMaterial = new THREE.MeshStandardMaterial({ color: '#facc15', metalness: 0.5, roughness: 0.3 });
 
   function createChunk(chunkIndex) {
     if (loadedChunks.has(chunkIndex)) return;
 
     const meshes = [];
-    const disposables = []; // geometries + unique materials + textures
+    const disposables = [];
 
     const startDist = chunkIndex * CHUNK_SIZE;
     const centerZ   = -(startDist + CHUNK_SIZE / 2);
 
-    // Ground plane
+    // 바닥(잔디) 생성
     const groundGeo = new THREE.PlaneGeometry(60, CHUNK_SIZE);
     const groundMesh = new THREE.Mesh(groundGeo, groundMaterial);
     groundMesh.rotation.x = -Math.PI / 2;
@@ -521,10 +521,10 @@
     groundMesh.receiveShadow = true;
     scene.add(groundMesh);
     meshes.push(groundMesh);
-    disposables.push(groundGeo); // dispose geometry; material is shared
+    disposables.push(groundGeo);
 
-    // Distance markers every 50m
-    for (let dist = startDist + 50; dist <= startDist + CHUNK_SIZE; dist += 50) {
+    // 🚀 수정된 부분: 표지판 간격을 50m -> 500m로 대폭 늘려 GPU 메모리 폭발 완벽 방지!
+    for (let dist = startDist + 500; dist <= startDist + CHUNK_SIZE; dist += 500) {
       const zPos = -dist;
 
       const poleGeo = new THREE.CylinderGeometry(0.06, 0.06, 4.0, 8);
@@ -535,7 +535,6 @@
       meshes.push(poleMesh);
       disposables.push(poleGeo);
 
-      // Banner canvas texture
       const bc = document.createElement('canvas');
       bc.width = 256; bc.height = 128;
       const bCtx = bc.getContext('2d');
@@ -543,9 +542,15 @@
       bCtx.strokeStyle = '#fde047'; bCtx.lineWidth = 10;
       bCtx.strokeRect(0, 0, 256, 128);
       bCtx.fillStyle = '#ffffff';
-      bCtx.font = '900 52px Pretendard, sans-serif';
+      bCtx.font = '900 48px Pretendard, sans-serif';
       bCtx.textAlign = 'center';
-      bCtx.fillText(dist + 'm', 128, 80);
+      
+      // 🚀 스케일에 맞게 엄청난 거리일 땐 km 단위로 간지나게 표시!
+      if (dist >= 1000) {
+        bCtx.fillText((dist / 1000).toFixed(1) + 'km', 128, 80);
+      } else {
+        bCtx.fillText(dist + 'm', 128, 80);
+      }
 
       const bannerTex = new THREE.CanvasTexture(bc);
       const bannerMat = new THREE.MeshStandardMaterial({ map: bannerTex, side: THREE.DoubleSide });
@@ -576,20 +581,11 @@
 
     for (let i = keepFrom; i <= keepTo; i++) createChunk(i);
     for (const [idx] of loadedChunks) {
-      if (idx < keepFrom) removeChunk(idx);
+      // 🚀 수정된 부분: 뒤쳐진 청크뿐만 아니라 초과된 청크도 엄격하게 지워서 메모리 누수 100% 차단
+      if (idx < keepFrom || idx > keepTo) removeChunk(idx);
     }
   }
 
-  function initChunks() {
-    for (const [idx] of loadedChunks) removeChunk(idx);
-    createChunk(0);
-    createChunk(1);
-    createChunk(2);
-  }
-
-  // ============================================================
-  // SOCCER BALL
-  // ============================================================
   // ============================================================
   // SOCCER BALL & SKINS
   // ============================================================
@@ -1071,7 +1067,7 @@
     gameState = STATES.FLYING;
   }
 
-  // ============================================================
+ // ============================================================
   // PHYSICS UPDATE
   // ============================================================
   function updatePhysics(dt) {
@@ -1082,7 +1078,7 @@
       if (kickAnimProgress >= 1.0) triggerBallLaunch();
     }
 
-      // --- FLIGHT PHYSICS ---
+    // --- FLIGHT PHYSICS ---
     if (gameState === STATES.FLYING) {
       ballVel.y -= 25.0 * dt;
       
@@ -1092,34 +1088,29 @@
       // 고도가 올라갈수록 저항이 줄어듦 (최대 0.9995까지만 적용)
       const airDrag = Math.min(0.9995, baseDrag + (altitude * 0.00002)); 
 
-      // 기존 0.997 대신 계산된 airDrag 변수를 적용
       ballVel.z *= Math.pow(airDrag, dt * 60);
       ballVel.x *= Math.pow(airDrag, dt * 60);
 
-      // 공의 위치 이동 (기존과 동일)
       // 공의 위치 이동
-   ballMesh.position.x += ballVel.x * dt;
-   ballMesh.position.y += ballVel.y * dt;
-   ballMesh.position.z += ballVel.z * dt;
+      ballMesh.position.x += ballVel.x * dt;
+      ballMesh.position.y += ballVel.y * dt;
+      ballMesh.position.z += ballVel.z * dt;
 
-   // 🚀 스킨별 회전 로직 (총알은 구르지 않고 비행 방향을 바라봄)
-   if (currentSkin === 'bullet') {
-     if (ballVel.y !== 0 || ballVel.z !== 0) {
-       ballMesh.lookAt(ballMesh.position.x + ballVel.x, ballMesh.position.y + ballVel.y, ballMesh.position.z + ballVel.z);
-     }
-   } else {
-     ballMesh.rotation.x += ballRot.x * dt;
-   }
+      // 🚀 스킨별 회전 로직 (총알은 구르지 않고 비행 방향을 바라봄)
+      if (currentSkin === 'bullet') {
+        if (ballVel.y !== 0 || ballVel.z !== 0) {
+          ballMesh.lookAt(ballMesh.position.x + ballVel.x, ballMesh.position.y + ballVel.y, ballMesh.position.z + ballVel.z);
+        }
+      } else {
+        ballMesh.rotation.x += ballRot.x * dt;
+      }
 
-   // 공중에 떠있을 때 스킨별 트레일 생성
-   if (!hasTouchedGround) {
-     if (currentSkin !== 'basic' || isFireballMode) createTrailParticle(ballMesh.position);
-   }
+      // 공중에 떠있을 때 스킨별 트레일 생성
+      if (!hasTouchedGround) {
+        if (currentSkin !== 'basic' || isFireballMode) createTrailParticle(ballMesh.position);
+      }
 
-      if (isFireballMode && !hasTouchedGround) createFireParticle(ballMesh.position);
-
-  const cZ = ballMesh.position.z;
-
+      const cZ = ballMesh.position.z;
 
       // ---- STAGE 1: Jetpack (1/4 point) ----
       if (hasJetpackEvent && !cpJetpackTriggered && cZ <= -(totalTargetDistance * 0.25)) {
@@ -1135,7 +1126,7 @@
       if (isJetpackAttached) {
         jetpackGroup.position.copy(ballMesh.position);
         jetpackGroup.position.z += 0.2;
-        createFireParticle(jetpackGroup.position);
+        createTrailParticle(jetpackGroup.position); // 🚀 에러 수정됨!
         if (ballVel.y < 0 && !isJetpackDetached) {
           isJetpackAttached = false; isJetpackDetached = true; jetpackVelY = -2.0;
         }
@@ -1148,8 +1139,8 @@
       }
 
       // ---- STAGE 2: Airplane (1/3 point) ----
-          if (hasAirplaneEvent && !cpAirplaneTriggered) {
-           if (cZ <= -(totalTargetDistance * (1/3)) + 25.0 && !airplaneActive) {
+      if (hasAirplaneEvent && !cpAirplaneTriggered) {
+        if (cZ <= -(totalTargetDistance * (1/3)) + 25.0 && !airplaneActive) {
           airplaneActive = true; airplaneProgress = 0;
           airplaneGroup.position.set(-30, Math.max(ballMesh.position.y, 2.0), -(totalTargetDistance * (1/3)));
           airplaneGroup.visible = true;
@@ -1216,12 +1207,13 @@
       if (isRocketPushing) {
         rocketTimer += dt * 1.5;
         rocketGroup.position.set(ballMesh.position.x, ballMesh.position.y - 0.9, ballMesh.position.z);
-        createFireParticle(rocketGroup.position);
+        createTrailParticle(rocketGroup.position); // 🚀 에러 수정됨!
         if (rocketTimer >= 1.2) {
           isRocketPushing = false;
           setTimeout(() => { rocketGroup.visible = false; }, 800);
         }
       }
+      
       // ---- NEW STAGE: 거꾸로 부는 바람 (4/5 지점) ----
       if (hasHeadwindEvent && !cpHeadwindTriggered && cZ <= -(totalTargetDistance * 0.8)) {
         cpHeadwindTriggered = true;
@@ -1233,8 +1225,6 @@
         ballVel.z += 25.0 * (penaltyDist / 50.0);
         ballVel.y -= 10.0;
       }
-     
-      
 
       // ---- GROUND BOUNCE / STOP ----
       if (ballMesh.position.y <= BALL_RADIUS) {
@@ -1275,7 +1265,7 @@
         // ---- NEW STAGE: 한 번 더 차기 (공 멈출 때) ----
         if (hasSecondKickEvent && !secondKickTriggered) {
           secondKickTriggered = true;
-          const extraDist = getBaseKickPower() * (power / 100); // 킥파워 * 파워 비율
+          const extraDist = getBaseKickPower() * (power / 100); 
           showEventBanner('🏃‍♂️', `세컨드 킥! 슛!`);
           totalTargetDistance += extraDist;
           
@@ -1283,7 +1273,7 @@
           ballVel.y = 15.0;
           isGrounded = false;
           playKickSound(power / 100);
-          return; // 게임 종료를 막고 다시 날아가게 함
+          return; 
         }
 
         // Ball fully stopped → game over
@@ -1294,7 +1284,8 @@
     }
 
     // --- MISC UPDATES ---
-    updateFireParticles();
+    updateTrailParticles(); // 🚀 에러 수정됨!
+    
     // 🔥 불타는 공은 차기 전이나 멈췄을 때도 항상 불꽃 방출
     if (currentSkin === 'flame' && Math.random() < 0.5) {
       createTrailParticle(ballMesh.position);
