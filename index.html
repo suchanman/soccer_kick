@@ -38,6 +38,7 @@
         <span id="hud-kick-power" class="hud-value">100m</span>
       </div>
       <button id="ranking-btn" class="hud-ranking-btn">🏅 랭킹</button>
+      <button id="upgrade-tab-btn" class="hud-ranking-btn" style="background: rgba(245, 158, 11, 0.85); border-color: rgba(251, 191, 36, 0.5);">⬆️ 강화</button>
     </div>
 
     <!-- Stacked Event Banner Container -->
@@ -67,6 +68,53 @@
     <!-- Speed Multiplier Button -->
     <button id="speed-btn" class="speed-btn">▶▶ 1x</button>
 
+    <!-- 2. 게임 시작용 킥 버튼 (화면 하단 중앙 배치) -->
+      <button id="kick-btn" class="kick-btn">⚽<br>KICK</button>
+
+      <!-- 3. 새로운 업그레이드 모달창 -->
+      <div id="upgrade-modal" class="modal-overlay hidden">
+        <div class="modal-content ranking-modal-content">
+          <h1 class="result-title">⬆️ 능력치 강화</h1>
+          <p style="color: #cbd5e1; font-weight: 600; margin-bottom: 16px;">보유 코인: <strong id="upg-current-coins" style="color:#fbbf24; font-size: 1.2rem;">0</strong></p>
+          
+          <div class="ranking-list">
+            <!-- 킥 파워 -->
+            <div class="ranking-item" style="flex-direction: column; gap: 8px;">
+              <div style="display:flex; justify-content:space-between; width:100%; font-weight:bold;">
+                <span style="color:white;">👟 킥 강화 (<span id="upg-lvl-kick">Lv.0</span>)</span>
+                <span style="color:#38bdf8;" id="upg-val-kick">100m</span>
+              </div>
+              <button id="upg-btn-kick" class="btn-upgrade">업그레이드 (<span id="upg-cost-kick">100</span>)</button>
+            </div>
+            <!-- 파워 수치 -->
+            <div class="ranking-item" style="flex-direction: column; gap: 8px;">
+              <div style="display:flex; justify-content:space-between; width:100%; font-weight:bold;">
+                <span style="color:white;">⚡ 게이지 파워 (<span id="upg-lvl-power">Lv.0</span>)</span>
+                <span style="color:#38bdf8;" id="upg-val-power">+0%</span>
+              </div>
+              <button id="upg-btn-power" class="btn-upgrade">업그레이드 (<span id="upg-cost-power">100</span>)</button>
+            </div>
+            <!-- 이벤트 효과 -->
+            <div class="ranking-item" style="flex-direction: column; gap: 8px;">
+              <div style="display:flex; justify-content:space-between; width:100%; font-weight:bold;">
+                <span style="color:white;">🎁 이벤트 효과 (<span id="upg-lvl-event">Lv.0</span>)</span>
+                <span style="color:#38bdf8;" id="upg-val-event">+0%</span>
+              </div>
+              <button id="upg-btn-event" class="btn-upgrade">업그레이드 (<span id="upg-cost-event">100</span>)</button>
+            </div>
+            <!-- 코인 획득 -->
+            <div class="ranking-item" style="flex-direction: column; gap: 8px;">
+              <div style="display:flex; justify-content:space-between; width:100%; font-weight:bold;">
+                <span style="color:white;">💰 코인 획득량 (<span id="upg-lvl-coin">Lv.0</span>)</span>
+                <span style="color:#38bdf8;" id="upg-val-coin">+0%</span>
+              </div>
+              <button id="upg-btn-coin" class="btn-upgrade">업그레이드 (<span id="upg-cost-coin">100</span>)</button>
+            </div>
+          </div>
+          <button id="upgrade-close-btn" class="btn-primary" style="margin-top: 16px;">✖ 닫기</button>
+        </div>
+      </div>
+    
     <!-- Result Popup Modal -->
     <div id="result-modal" class="modal-overlay hidden">
       <div class="modal-content">
@@ -84,16 +132,7 @@
           </div>
         </div>
 
-        <div class="upgrade-section">
-          <div class="upgrade-info">
-            <span>보유 코인: <strong id="modal-coins">0</strong> 코인</span>
-            <span>현재 킥 파워: <strong id="modal-kick-power">100m</strong></span>
-          </div>
-          <button id="upgrade-btn" class="btn-upgrade">
-            <span class="btn-icon">⚡</span> 킥 파워 +10m 업그레이드 (<span id="upgrade-cost">100</span> 코인)
-          </button>
-        </div>
-
+       
         <button id="restart-btn" class="btn-primary">
           <span class="btn-icon">🔄</span> 다시 차기
         </button>
