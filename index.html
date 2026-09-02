@@ -39,6 +39,7 @@
       </div>
       <button id="ranking-btn" class="hud-ranking-btn">🏅 랭킹</button>
       <button id="upgrade-tab-btn" class="hud-ranking-btn" style="background: rgba(245, 158, 11, 0.85); border-color: rgba(251, 191, 36, 0.5);">⬆️ 강화</button>
+      <button id="skin-tab-btn" class="hud-ranking-btn" style="background: rgba(16, 185, 129, 0.85); border-color: rgba(52, 211, 153, 0.5);">🎨 스킨</button>
     </div>
 
     <!-- Stacked Event Banner Container -->
@@ -164,6 +165,18 @@
         </button>
       </div>
     </div>
+<!-- 🚀 4. 스킨 상점 모달창 추가된 부분 -->
+    <div id="skin-modal" class="modal-overlay hidden">
+      <div class="modal-content ranking-modal-content" style="max-width: 440px;">
+        <h1 class="result-title">🎨 스킨 상점</h1>
+        <p style="color: #cbd5e1; font-size:0.85rem; margin-bottom:16px;">보유 효과는 장착하지 않아도 영구 적용됩니다!</p>
+        <div class="ranking-list" id="skin-list-container">
+          <!-- JS에서 동적 생성됨 -->
+        </div>
+        <button id="skin-close-btn" class="btn-primary" style="margin-top: 16px;">✖ 닫기</button>
+      </div>
+    </div>
+    
   </div>
 
   <script src="game.js"></script>
