@@ -255,32 +255,74 @@
   // ============================================================
   // CURRENCY & UPGRADE SYSTEM
   // ============================================================
-  let coins         = parseInt(localStorage.getItem('soccer_coins') || '0', 10);
-  let kickPowerLevel= parseInt(localStorage.getItem('soccer_kick_power_level') || '0', 10);
+  // ============================================================
+  // MULTI-UPGRADE SYSTEM
+  // ============================================================
+  let coins = parseInt(localStorage.getItem('soccer_coins') || '0', 10);
+  let lvKick  = parseInt(localStorage.getItem('soccer_upg_kick') || '0', 10);
+  let lvPower = parseInt(localStorage.getItem('soccer_upg_power') || '0', 10);
+  let lvEvent = parseInt(localStorage.getItem('soccer_upg_event') || '0', 10);
+  let lvCoin  = parseInt(localStorage.getItem('soccer_upg_coin') || '0', 10);
 
-  function getBaseKickPower() { return 100 + kickPowerLevel * 10; }
-  function getUpgradeCost()   { return Math.floor(100 * Math.pow(1.4, kickPowerLevel)); }
+  function getBaseKickPower() { return 100 + lvKick * 10; }
+  function getCost(lv) { return Math.floor(100 * Math.pow(1.2, lv)); } // 1.2로 비용 완화 완료
+
+  const upgradeModalEl = document.getElementById('upgrade-modal');
+  document.getElementById('upgrade-tab-btn').addEventListener('click', () => {
+    upgradeModalEl.classList.remove('hidden');
+    updateCurrencyUI();
+  });
+  document.getElementById('upgrade-close-btn').addEventListener('click', () => {
+    upgradeModalEl.classList.add('hidden');
+  });
 
   function updateCurrencyUI() {
-    hudCoinsEl.textContent     = coins.toLocaleString();
+    hudCoinsEl.textContent = coins.toLocaleString();
     hudKickPowerEl.textContent = getBaseKickPower() + 'm';
-    modalCoinsEl.textContent   = coins.toLocaleString();
-    modalKickPowerEl.textContent = getBaseKickPower() + 'm';
-    const cost = getUpgradeCost();
-    upgradeCostEl.textContent  = cost.toLocaleString();
-    upgradeBtn.disabled        = coins < cost;
+    
+    if(!document.getElementById('upg-current-coins')) return; // 초기 로딩 에러 방지
+    
+    document.getElementById('upg-current-coins').textContent = coins.toLocaleString();
+    
+    // 킥 강화
+    document.getElementById('upg-lvl-kick').textContent = 'Lv.' + lvKick;
+    document.getElementById('upg-val-kick').textContent = getBaseKickPower() + 'm';
+    document.getElementById('upg-cost-kick').textContent = getCost(lvKick).toLocaleString();
+    document.getElementById('upg-btn-kick').disabled = coins < getCost(lvKick);
+    
+    // 파워 수치 증가 (+5% 씩)
+    document.getElementById('upg-lvl-power').textContent = 'Lv.' + lvPower;
+    document.getElementById('upg-val-power').textContent = '+' + (lvPower * 5) + '%';
+    document.getElementById('upg-cost-power').textContent = getCost(lvPower).toLocaleString();
+    document.getElementById('upg-btn-power').disabled = coins < getCost(lvPower);
+
+    // 이벤트 효과 증가 (+5% 씩)
+    document.getElementById('upg-lvl-event').textContent = 'Lv.' + lvEvent;
+    document.getElementById('upg-val-event').textContent = '+' + (lvEvent * 5) + '%';
+    document.getElementById('upg-cost-event').textContent = getCost(lvEvent).toLocaleString();
+    document.getElementById('upg-btn-event').disabled = coins < getCost(lvEvent);
+
+    // 코인 획득량 증가 (+10% 씩)
+    document.getElementById('upg-lvl-coin').textContent = 'Lv.' + lvCoin;
+    document.getElementById('upg-val-coin').textContent = '+' + (lvCoin * 10) + '%';
+    document.getElementById('upg-cost-coin').textContent = getCost(lvCoin).toLocaleString();
+    document.getElementById('upg-btn-coin').disabled = coins < getCost(lvCoin);
   }
 
-  upgradeBtn.addEventListener('click', () => {
-    const cost = getUpgradeCost();
-    if (coins >= cost) {
-      coins -= cost;
-      kickPowerLevel++;
-      localStorage.setItem('soccer_coins', coins.toString());
-      localStorage.setItem('soccer_kick_power_level', kickPowerLevel.toString());
-      updateCurrencyUI();
-    }
-  });
+  function buyUpgrade(type) {
+    let cost = 0;
+    if (type === 'kick')  { cost = getCost(lvKick);  if (coins >= cost) { coins -= cost; lvKick++;  localStorage.setItem('soccer_upg_kick', lvKick); } }
+    if (type === 'power') { cost = getCost(lvPower); if (coins >= cost) { coins -= cost; lvPower++; localStorage.setItem('soccer_upg_power', lvPower); } }
+    if (type === 'event') { cost = getCost(lvEvent); if (coins >= cost) { coins -= cost; lvEvent++; localStorage.setItem('soccer_upg_event', lvEvent); } }
+    if (type === 'coin')  { cost = getCost(lvCoin);  if (coins >= cost) { coins -= cost; lvCoin++;  localStorage.setItem('soccer_upg_coin', lvCoin); } }
+    localStorage.setItem('soccer_coins', coins.toString());
+    updateCurrencyUI();
+  }
+
+  document.getElementById('upg-btn-kick').addEventListener('click', () => buyUpgrade('kick'));
+  document.getElementById('upg-btn-power').addEventListener('click', () => buyUpgrade('power'));
+  document.getElementById('upg-btn-event').addEventListener('click', () => buyUpgrade('event'));
+  document.getElementById('upg-btn-coin').addEventListener('click', () => buyUpgrade('coin'));
 
   // ============================================================
   // SPEED MULTIPLIER
@@ -654,16 +696,7 @@
   moleGroup.visible = false;
   scene.add(moleGroup);
   
-  // 7. Wall (거대한 벽)
-  const wallGroup = new THREE.Group();
-  const wallMesh = new THREE.Mesh(
-    new THREE.BoxGeometry(15, 6, 1),
-    new THREE.MeshStandardMaterial({ color: '#334155', roughness: 0.9 })
-  );
-  wallMesh.position.set(0, 3, 0); // 땅 위로 배치
-  wallGroup.add(wallMesh);
-  wallGroup.visible = false;
-  scene.add(wallGroup);
+  
 
   // ============================================================
   // FIREBALL TRAIL SYSTEM (80%+ power)
@@ -730,7 +763,7 @@
 
   let hasHeadwindEvent = false, cpHeadwindTriggered = false, checkPointHeadwindZ = 0;
   let hasSecondKickEvent = false, secondKickTriggered = false;
-  let hasWallEvent = false, cpWallTriggered = false, checkPointWallZ = 0;
+  
 
   let cpJetpackTriggered = false, cpAirplaneTriggered = false, cpEagleTriggered = false;
   let cpWindTriggered = false, cpRocketTriggered = false, cpMoleTriggered = false;
@@ -776,8 +809,7 @@
     hasWindEvent = hasRocketEvent = hasMoleEvent = false;
     hasHeadwindEvent = false; cpHeadwindTriggered = false;
     hasSecondKickEvent = false; secondKickTriggered = false;
-    hasWallEvent = false; cpWallTriggered = false; wallGroup.visible = false;
-
+   
     cpJetpackTriggered = cpAirplaneTriggered = cpEagleTriggered = false;
     cpWindTriggered = cpRocketTriggered = cpMoleTriggered = false;
     isJetpackAttached = isJetpackDetached = false;
@@ -807,6 +839,11 @@
   // ============================================================
   // INPUT LISTENERS
   // ============================================================
+  // ============================================================
+  // INPUT LISTENERS (버튼 터치 방식으로 변경)
+  // ============================================================
+  const kickBtnEl = document.getElementById('kick-btn');
+  
   function handlePressStart() {
     if (gameState === STATES.STOPPED) return;
     initAudio();
@@ -823,19 +860,17 @@
     }
   }
 
-  window.addEventListener('pointerdown', (e) => {
-    if (e.target.closest('#result-modal') || e.target.closest('#nickname-modal') ||
-        e.target.closest('#ranking-modal') || e.target.id === 'speed-btn' ||
-        e.target.id === 'ranking-btn') return;
-    handlePressStart();
+  // 화면 전체 터치 대신 킥 버튼만 감지
+  kickBtnEl.addEventListener('pointerdown', handlePressStart);
+  kickBtnEl.addEventListener('pointerup', handlePressEnd);
+  kickBtnEl.addEventListener('pointerleave', () => {
+    if (gameState === STATES.CHARGING) handlePressEnd();
   });
-  window.addEventListener('pointerup', handlePressEnd);
 
   window.addEventListener('keydown', (e) => { if (e.code === 'Space' && !e.repeat) handlePressStart(); });
   window.addEventListener('keyup',   (e) => { if (e.code === 'Space') handlePressEnd(); });
 
   restartBtn.addEventListener('click', resetGame);
-
   // ============================================================
   // POWER GAUGE
   // ============================================================
@@ -863,8 +898,13 @@
   // ============================================================
   function triggerBallLaunch() {
     const pFactor = power / 100;
-
-    isFireballMode   = (power >= 80);
+    pFactor = pFactor * (1 + (lvPower * 0.05)); // 업그레이드당 파워 5% 추가 증폭
+  // 🚀 NEW: 50% 확률로 강화킥 발동 (파워 수치 2배)
+    if (Math.random() < 0.5) {
+      pFactor *= 2.0; 
+      showEventBanner('🔥', `강화킥 발동! 파워 2배!`);
+    }
+    isFireballMode   = (power >= 80) || (pFactor >= 1.5);
     hasTouchedGround = false;
 
     // Pre-determine all 6 events (50% probability each)
@@ -880,15 +920,15 @@
     checkPointHeadwindZ = -(baseTargetDistance * 0.8); // 4/5 지점
     hasSecondKickEvent = Math.random() < 0.5;
     
-    // triggerBallLaunch 안쪽 이벤트 확률 모여있는 곳에 추가
-    hasWallEvent = Math.random() < 0.3;
+    
     
     // triggerBallLaunch 안쪽 체크포인트(checkPointRocketZ 등) 모여있는 곳에 추가
     checkPointWallZ = -(baseTargetDistance * (5 / 6)); // 5/6 지점
 
     
     // ★ Event bonus formula: kickPower * 0.5 * power%
-    eventBonus        = Math.max(1, Math.round(getBaseKickPower() * 0.5 * pFactor));
+    const baseEventBonus = Math.max(1, Math.round(getBaseKickPower() * 0.5 * pFactor));
+    eventBonus = Math.round(baseEventBonus * (1 + (lvEvent * 0.05))); // 업그레이드당 이벤트 거리 5% 증가
     eventBonusVelScale = eventBonus / 50.0; // scale relative to base tuning (50m)
 
     const maxKickPower = getBaseKickPower();
@@ -1063,20 +1103,7 @@
         ballVel.y -= 10.0;
       }
      
-      // ---- NEW STAGE: 거대한 벽 생성 (5/6 지점) ----
-      if (hasWallEvent && !cpWallTriggered && cZ <= -(totalTargetDistance * (5/6))) {
-        cpWallTriggered = true;
-        showEventBanner('🧱', `통곡의 벽 등장!`);
-        // 벽을 공 앞에 렌더링
-        wallGroup.position.set(ballMesh.position.x, 0, -(totalTargetDistance * (5/6)) - 2.0);
-
-        wallGroup.visible = true;
-        
-        // 공이 뒤로 튕겨 나감 (기존 속도 반전)
-        ballVel.z = Math.abs(ballVel.z) * 0.6; // 뒤로 60% 힘으로 튕김
-        ballVel.y = 12.0; // 위로 살짝 뜸
-        playBounceSound();
-      }
+      
 
       // ---- GROUND BOUNCE / STOP ----
       if (ballMesh.position.y <= BALL_RADIUS) {
@@ -1166,7 +1193,8 @@
   function handleGameOver(finalDistance) {
     playWhistleSound();
 
-    const earned = Math.floor(finalDistance);
+    const baseEarned = Math.floor(finalDistance);
+    const earned = Math.floor(baseEarned * (1 + (lvCoin * 0.1))); // 업그레이드당 코인 10% 추가
     coins += earned;
     localStorage.setItem('soccer_coins', coins.toString());
 
