@@ -655,12 +655,22 @@
       const tp = trailParticles[i]; tp.life -= tp.decay;
       if (currentSkin === 'bullet') tp.mesh.scale.set(tp.life, 1, tp.life); else tp.mesh.scale.multiplyScalar(0.92);
       tp.mesh.material.opacity = tp.life;
-      if (tp.life <= 0) { trailGroup.remove(tp.mesh); trailParticles.splice(i, 1); }
+      if (tp.life <= 0) { 
+        trailGroup.remove(tp.mesh); 
+        // 🚀 핵심 수정: 안 쓰는 파티클의 메모리를 완전히 박살내서 비워줍니다!
+        tp.mesh.geometry.dispose(); 
+        tp.mesh.material.dispose(); 
+        trailParticles.splice(i, 1); 
+      }
     }
   }
 
   function clearAllTrailParticles() {
-    trailParticles.forEach(tp => trailGroup.remove(tp.mesh));
+    trailParticles.forEach(tp => {
+      trailGroup.remove(tp.mesh);
+      tp.mesh.geometry.dispose(); 
+      tp.mesh.material.dispose();
+    });
     trailParticles.length = 0;
   }
 
@@ -793,10 +803,11 @@
     playKickSound(pFactor); gameState = STATES.FLYING;
   }
 
-  // ============================================================
+ // ============================================================
   // PHYSICS UPDATE
   // ============================================================
-  function updatePhysics(dt) {
+  // 🚀 핵심 수정: isLastLoop 플래그를 추가해 눈에 보이는 그래픽은 딱 1번만 처리하게 막음!
+  function updatePhysics(dt, isLastLoop = true) {
     if (gameState === STATES.KICKING) {
       kickAnimProgress += dt * 8; leftLegPivot.rotation.x = -0.85 + kickAnimProgress * 1.7;
       if (kickAnimProgress >= 1.0) triggerBallLaunch();
@@ -804,20 +815,16 @@
 
     if (gameState === STATES.FLYING) {
       ballVel.y -= 25.0 * dt;
-      
       const altitude = Math.max(0, ballMesh.position.y);
       const baseDrag = 0.996; 
       const airDrag = Math.min(0.9995, baseDrag + (altitude * 0.00002)); 
 
       ballVel.z *= Math.pow(airDrag, dt * 60); ballVel.x *= Math.pow(airDrag, dt * 60);
-
       ballMesh.position.x += ballVel.x * dt; ballMesh.position.y += ballVel.y * dt; ballMesh.position.z += ballVel.z * dt;
 
       if (currentSkin === 'bullet') {
         if (ballVel.y !== 0 || ballVel.z !== 0) ballMesh.lookAt(ballMesh.position.x + ballVel.x, ballMesh.position.y + ballVel.y, ballMesh.position.z + ballVel.z);
       } else { ballMesh.rotation.x += ballRot.x * dt; }
-
-      if (!hasTouchedGround) { if (currentSkin !== 'basic' || isFireballMode) createTrailParticle(ballMesh.position); }
 
       const cZ = ballMesh.position.z;
 
@@ -826,9 +833,9 @@
         totalTargetDistance += eventBonus; ballVel.z -= 32.0 * eventBonusVelScale; ballVel.y += 18.0 * eventBonusVelScale;
         isJetpackAttached = true; jetpackGroup.visible = true;
       }
-
       if (isJetpackAttached) {
-        jetpackGroup.position.copy(ballMesh.position); jetpackGroup.position.z += 0.2; createTrailParticle(jetpackGroup.position); 
+        jetpackGroup.position.copy(ballMesh.position); jetpackGroup.position.z += 0.2; 
+        if (isLastLoop) createTrailParticle(jetpackGroup.position); 
         if (ballVel.y < 0 && !isJetpackDetached) { isJetpackAttached = false; isJetpackDetached = true; jetpackVelY = -2.0; }
       }
       if (isJetpackDetached && jetpackGroup.visible) {
@@ -872,7 +879,8 @@
         isRocketPushing = true; rocketTimer = 0; rocketGroup.visible = true; ballVel.z -= 34.0 * eventBonusVelScale; ballVel.y += 18.0 * eventBonusVelScale;
       }
       if (isRocketPushing) {
-        rocketTimer += dt * 1.5; rocketGroup.position.set(ballMesh.position.x, ballMesh.position.y - 0.9, ballMesh.position.z); createTrailParticle(rocketGroup.position); 
+        rocketTimer += dt * 1.5; rocketGroup.position.set(ballMesh.position.x, ballMesh.position.y - 0.9, ballMesh.position.z); 
+        if (isLastLoop) createTrailParticle(rocketGroup.position); 
         if (rocketTimer >= 1.2) { isRocketPushing = false; setTimeout(() => { rocketGroup.visible = false; }, 800); }
       }
 
@@ -908,17 +916,25 @@
       }
     }
 
-    updateTrailParticles(); 
-    if (currentSkin === 'flame' && Math.random() < 0.5) createTrailParticle(ballMesh.position);
-    currentDistanceEl.textContent = Math.abs(ballMesh.position.z).toFixed(1) + ' m';
-    if (windParticlesGroup.visible) windParticlesGroup.position.set(ballMesh.position.x, ballMesh.position.y, ballMesh.position.z);
+    // 🚀 눈에 보여지는 시각 효과들은 50번 루프를 다 돌고 딱 마지막(isLastLoop)에만 실행!
+    if (isLastLoop) {
+      if (gameState === STATES.FLYING && !hasTouchedGround) {
+        if (currentSkin !== 'basic' || isFireballMode) createTrailParticle(ballMesh.position);
+      }
+      
+      updateTrailParticles(); 
+      if (currentSkin === 'flame' && Math.random() < 0.5) createTrailParticle(ballMesh.position);
+      
+      currentDistanceEl.textContent = Math.abs(ballMesh.position.z).toFixed(1) + ' m';
+      if (windParticlesGroup.visible) windParticlesGroup.position.set(ballMesh.position.x, ballMesh.position.y, ballMesh.position.z);
 
-    if (gameState === STATES.FLYING || gameState === STATES.STOPPED) {
-      const targetCamPos = new THREE.Vector3(ballMesh.position.x * 0.5 + 0.3, Math.max(ballMesh.position.y + 2.4, 2.5), ballMesh.position.z + 5.5);
-      camera.position.lerp(targetCamPos, 0.08); camera.lookAt(new THREE.Vector3(ballMesh.position.x, ballMesh.position.y + 0.5, ballMesh.position.z - 4.0));
-      dirLight.position.set(ballMesh.position.x + 20, 40, ballMesh.position.z + 20);
-    } else {
-      camera.position.lerp(defaultCamPos, 0.1); camera.lookAt(defaultCamTarget);
+      if (gameState === STATES.FLYING || gameState === STATES.STOPPED) {
+        const targetCamPos = new THREE.Vector3(ballMesh.position.x * 0.5 + 0.3, Math.max(ballMesh.position.y + 2.4, 2.5), ballMesh.position.z + 5.5);
+        camera.position.lerp(targetCamPos, 0.08); camera.lookAt(new THREE.Vector3(ballMesh.position.x, ballMesh.position.y + 0.5, ballMesh.position.z - 4.0));
+        dirLight.position.set(ballMesh.position.x + 20, 40, ballMesh.position.z + 20);
+      } else {
+        camera.position.lerp(defaultCamPos, 0.1); camera.lookAt(defaultCamTarget);
+      }
     }
   }
 
@@ -966,7 +982,12 @@
     const rawDt = Math.min((now - lastTime) / 1000, 0.05); lastTime = now;
     updatePower(rawDt);  
     const loops = (gameState === STATES.FLYING || gameState === STATES.KICKING) ? speedMultiplier : 1;
-    for (let i = 0; i < loops; i++) updatePhysics(rawDt);
+    
+    // 🚀 루프를 돌릴 때 마지막 바퀴(i === loops - 1)인지 알려줌
+    for (let i = 0; i < loops; i++) {
+      updatePhysics(rawDt, i === loops - 1);
+    }
+    
     updateChunks(); renderer.render(scene, camera);
   }
 
