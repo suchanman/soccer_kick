@@ -1067,9 +1067,26 @@ document.addEventListener('DOMContentLoaded', () => {
           }
         }
         if (hasSecondKickEvent && !secondKickTriggered) {
-          secondKickTriggered = true; const extraDist = getBaseKickPower() * (power / 100); 
-          showEventBanner('🏃‍♂️', `세컨드 킥! 슛!`); totalTargetDistance += extraDist;
-          ballVel.z = -35.0 * (extraDist / 50.0); ballVel.y = 15.0; isGrounded = false; playKickSound(power / 100); return; 
+          secondKickTriggered = true; 
+          
+          // 🌟 처음 찰 때와 완벽히 동일한 풀파워(업그레이드+스킨 보너스)를 다시 계산!
+          let pFactor = power / 100;
+          pFactor = pFactor * (1 + (lvPower * 0.05) + getSkinPowerBonus());
+          const maxKickPower = getBaseKickPower();
+          const sf = maxKickPower / 100;
+          
+          const extraDist = maxKickPower * pFactor; 
+          showEventBanner('🏃‍♂️', `세컨드 킥! 풀파워 재발사!`); 
+          totalTargetDistance += extraDist;
+          
+          // 🌟 찔끔 날아가는 대신, 처음 발사 공식을 그대로 가져와서 시원하게 날려버림
+          ballVel.z = -(22 * sf + pFactor * 85 * sf);
+          ballVel.y = 8 * Math.sqrt(sf) + pFactor * 30 * Math.sqrt(sf);
+          ballVel.x = (Math.random()-0.5) * 1.5;
+          
+          isGrounded = false; 
+          playKickSound(pFactor); 
+          return; 
         }
 
         ballVel.z = 0; ballVel.x = 0; ballVel.y = 0; gameState = STATES.STOPPED;
