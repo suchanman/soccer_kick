@@ -696,9 +696,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const maxKickPower = getBaseKickPower(); baseTargetDistance = maxKickPower * pFactor; totalTargetDistance = baseTargetDistance;
     const sf = maxKickPower / 100;
-    ballVel.z = -(22 * sf + pFactor * 85 * sf); ballVel.y = 8 * Math.sqrt(sf) + pFactor * 30 * Math.sqrt(sf); ballVel.x = (Math.random()-0.5) * 1.5; ballRot.x = ballVel.z * 0.1;
+    
+    // 🌟 아이디어 1: 수직 속도 제한 및 레이저 빔 궤적 보정 (첫 킥)
+    let calcVelY = 8 * Math.sqrt(sf) + pFactor * 30 * Math.sqrt(sf);
+    let calcVelZ = -(22 * sf + pFactor * 85 * sf);
+    
+    const MAX_VEL_Y = 150; // 공이 올라가는 최대 속도 (체공 시간 제한)
+    if (calcVelY > MAX_VEL_Y) {
+      const excessY = calcVelY - MAX_VEL_Y;
+      calcVelY = MAX_VEL_Y; // 위로 뜨는 힘은 고정시키고
+      calcVelZ -= excessY * 3.0; // 위로 못 간 만큼 앞으로 3배 뻥튀기해서 일직선으로 쏴버림!
+    }
+    
+    ballVel.y = calcVelY; ballVel.z = calcVelZ; ballVel.x = (Math.random()-0.5) * 1.5; ballRot.x = ballVel.z * 0.1;
     isGrounded = false; playKickSound(pFactor); gameState = STATES.FLYING;
-
     if (lvStartingWarp > 0) { const warpDist = lvStartingWarp * 10000; ballMesh.position.z = -warpDist; totalTargetDistance += warpDist; showEventBanner('🌠', `스타팅 워프! ${warpDist.toLocaleString()}m 스킵!`); }
   }
 
@@ -745,8 +756,20 @@ document.addEventListener('DOMContentLoaded', () => {
           let pFactor = power / 100; pFactor = pFactor * (1 + (lvPower * 0.05) + getSkinPowerBonus()); pFactor *= 2.5;
           const maxKickPower = getBaseKickPower(); const sf = maxKickPower / 100; const extraDist = maxKickPower * pFactor; 
           showEventBanner('🏃‍♂️', `세컨드 킥! 풀파워 재발사!`); totalTargetDistance += extraDist;
-          ballVel.z = -(22 * sf + pFactor * 85 * sf); ballVel.y = 8 * Math.sqrt(sf) + pFactor * 30 * Math.sqrt(sf); ballVel.x = (Math.random()-0.5) * 1.5;
-          isGrounded = false; playKickSound(pFactor); return; 
+          
+          // 🌟 아이디어 1: 수직 속도 제한 및 레이저 빔 궤적 보정 (세컨드 킥)
+          let calcVelY = 8 * Math.sqrt(sf) + pFactor * 30 * Math.sqrt(sf);
+          let calcVelZ = -(22 * sf + pFactor * 85 * sf);
+          
+          const MAX_VEL_Y = 150; 
+          if (calcVelY > MAX_VEL_Y) {
+            const excessY = calcVelY - MAX_VEL_Y;
+            calcVelY = MAX_VEL_Y;
+            calcVelZ -= excessY * 3.0; // 넘치는 에너지를 앞으로 몰아주기
+          }
+          
+          ballVel.y = calcVelY; ballVel.z = calcVelZ; ballVel.x = (Math.random()-0.5) * 1.5;
+          isGrounded = false; playKickSound(pFactor); return;
         }
         ballVel.z = 0; ballVel.x = 0; ballVel.y = 0; gameState = STATES.STOPPED; setTimeout(() => { handleGameOver(Math.abs(ballMesh.position.z)); }, 1000);
       }
