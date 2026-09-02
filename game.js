@@ -695,25 +695,20 @@ document.addEventListener('DOMContentLoaded', () => {
     eventBonus = Math.round(baseEventBonus * (1 + (lvEvent * 0.05))); eventBonusVelScale = eventBonus / 50.0; 
 
     const maxKickPower = getBaseKickPower(); baseTargetDistance = maxKickPower * pFactor; totalTargetDistance = baseTargetDistance;
+    
+    // 🌟 오류를 일으키던 레이저빔 궤적 코드를 지우고 안전한 오리지널 궤적으로 복구!
     const sf = maxKickPower / 100;
+    ballVel.z = -(22 * sf + pFactor * 85 * sf); 
+    ballVel.y = 8 * Math.sqrt(sf) + pFactor * 30 * Math.sqrt(sf); 
+    ballVel.x = (Math.random()-0.5) * 1.5; 
+    ballRot.x = ballVel.z * 0.1;
     
-    // 🌟 아이디어 1: 수직 속도 제한 및 레이저 빔 궤적 보정 (첫 킥)
-    let calcVelY = 8 * Math.sqrt(sf) + pFactor * 30 * Math.sqrt(sf);
-    let calcVelZ = -(22 * sf + pFactor * 85 * sf);
-    
-    const MAX_VEL_Y = 150; // 공이 올라가는 최대 속도 (체공 시간 제한)
-    if (calcVelY > MAX_VEL_Y) {
-      const excessY = calcVelY - MAX_VEL_Y;
-      calcVelY = MAX_VEL_Y; // 위로 뜨는 힘은 고정시키고
-      calcVelZ -= excessY * 3.0; // 위로 못 간 만큼 앞으로 3배 뻥튀기해서 일직선으로 쏴버림!
-    }
-    
-    ballVel.y = calcVelY; ballVel.z = calcVelZ; ballVel.x = (Math.random()-0.5) * 1.5; ballRot.x = ballVel.z * 0.1;
     isGrounded = false; playKickSound(pFactor); gameState = STATES.FLYING;
+
     if (lvStartingWarp > 0) { const warpDist = lvStartingWarp * 10000; ballMesh.position.z = -warpDist; totalTargetDistance += warpDist; showEventBanner('🌠', `스타팅 워프! ${warpDist.toLocaleString()}m 스킵!`); }
   }
 
-  function updatePhysics(dt) {
+ function updatePhysics(dt) {
     if (gameState === STATES.CHARGING) { power += POWER_SPEED * dt; if (power >= 100) power = power % 100; leftLegPivot.rotation.x = -(power / 100) * 0.85; }
     if (gameState === STATES.KICKING) { kickAnimProgress += dt * 8; leftLegPivot.rotation.x = -0.85 + kickAnimProgress * 1.7; if (kickAnimProgress >= 1.0) triggerBallLaunch(); }
     if (gameState === STATES.FLYING) {
@@ -729,34 +724,27 @@ document.addEventListener('DOMContentLoaded', () => {
       if (hasAirplaneEvent && !cpAirplaneTriggered) { if (cZ <= -(totalTargetDistance * (1/3)) + 25.0 && !airplaneActive) { airplaneActive = true; airplaneProgress = 0; airplaneGroup.position.set(-30, Math.max(ballMesh.position.y, 2.0), -(totalTargetDistance * (1/3))); airplaneGroup.visible = true; showEventBanner('✈️', `AIRPLANE BOOST! +${eventBonus}m`); } if (airplaneActive) { airplaneProgress += dt * 2.2; const planeX = -30 + airplaneProgress * 30; airplaneGroup.position.x = planeX; airplaneGroup.position.y = ballMesh.position.y; airplaneGroup.position.z = ballMesh.position.z; if (planeX >= ballMesh.position.x - 0.2) { playBounceSound(); cpAirplaneTriggered = true; airplaneActive = false; airplaneGroup.visible = false; totalTargetDistance += eventBonus; ballVel.z -= 40.0 * eventBonusVelScale; ballVel.y += 14.0 * eventBonusVelScale; } } }
       if (hasEagleEvent && !cpEagleTriggered && cZ <= -(totalTargetDistance * 0.50)) { cpEagleTriggered = true; showEventBanner('🦅', `EAGLE SNATCH! +${eventBonus}m`); totalTargetDistance += eventBonus; isEagleCarrying = true; eagleTimer = 0; eagleGroup.visible = true; ballVel.z -= 30.0 * eventBonusVelScale; ballVel.y += 8.0 * eventBonusVelScale; }
       if (isEagleCarrying) { eagleTimer += dt * 1.5; eagleGroup.position.copy(ballMesh.position); eagleGroup.position.y += 0.4; eagleGroup.rotation.z = Math.sin(eagleTimer * 10) * 0.1; if (eagleTimer >= 1.2) { isEagleCarrying = false; eagleGroup.position.y += dt * 20; setTimeout(() => { eagleGroup.visible = false; }, 800); } }
-      
-      if (hasBlackholeEvent && !cpBlackholeTriggered && cZ <= -(totalTargetDistance * 0.60)) {
-        cpBlackholeTriggered = true; const jump = 50000 * (1 + lvSuperPower); showEventBanner('🌀', `블랙홀 흡수! ${jump.toLocaleString()}m 워프!`); totalTargetDistance += jump;
-        ballMesh.position.z -= jump; ballVel.z -= 50.0; ballVel.y += 20.0;
-      }
-      
+      if (hasBlackholeEvent && !cpBlackholeTriggered && cZ <= -(totalTargetDistance * 0.60)) { cpBlackholeTriggered = true; const jump = 50000 * (1 + lvSuperPower); showEventBanner('🌀', `블랙홀 흡수! ${jump.toLocaleString()}m 워프!`); totalTargetDistance += jump; ballMesh.position.z -= jump; ballVel.z -= 50.0; ballVel.y += 20.0; }
       if (hasWindEvent && !cpWindTriggered && cZ <= -(totalTargetDistance * (2/3))) { cpWindTriggered = true; showEventBanner('🌬️', `WIND GUST! +${eventBonus}m`); totalTargetDistance += eventBonus; ballVel.z -= 35.0 * eventBonusVelScale; ballVel.y += 12.0 * eventBonusVelScale; windParticlesGroup.position.set(ballMesh.position.x, ballMesh.position.y, ballMesh.position.z); windParticlesGroup.visible = true; setTimeout(() => { windParticlesGroup.visible = false; }, 2000); }
       if (hasRocketEvent && !cpRocketTriggered && cZ <= -(totalTargetDistance * 0.75)) { cpRocketTriggered = true; showEventBanner('🚀', `ROCKET THRUST! +${eventBonus}m`); totalTargetDistance += eventBonus; isRocketPushing = true; rocketTimer = 0; rocketGroup.visible = true; ballVel.z -= 34.0 * eventBonusVelScale; ballVel.y += 18.0 * eventBonusVelScale; }
       if (isRocketPushing) { rocketTimer += dt * 1.5; rocketGroup.position.set(ballMesh.position.x, ballMesh.position.y - 0.9, ballMesh.position.z); if (rocketTimer >= 1.2) { isRocketPushing = false; setTimeout(() => { rocketGroup.visible = false; }, 800); } }
       if (hasHeadwindEvent && !cpHeadwindTriggered && cZ <= -(totalTargetDistance * 0.8)) { cpHeadwindTriggered = true; const penaltyDist = getBaseKickPower() * 0.2; showEventBanner('🌪️', `역풍 발생! 거리 감소!`); totalTargetDistance -= penaltyDist; ballVel.z += 25.0 * (penaltyDist / 50.0); ballVel.y -= 10.0; }
 
-      // 🌟 실시간 궤적 보정: 비행 중 터지는 모든 이벤트와 탭 부스트의 Y축 폭주를 감시!
-      if (ballVel.y > 150) {
-        const excessY = ballVel.y - 150;
-        ballVel.y = 150; // 수직 속도는 한계치에 고정시키고
-        ballVel.z -= excessY * 2.0; // 위로 가려던 그 엄청난 에너지를 전부 Z축(앞)으로 몰빵!
-      }
-      
-      // 🌟 절대 우주 방어막: 물리 연산 버그로 1000m를 넘어가면 메테오처럼 바닥에 꽂아버림!
-      if (ballMesh.position.y > 1000) {
-        ballVel.y = -200; // 땅으로 초고속 수직 강하 (시간 절약)
-        ballMesh.position.y = 1000;
+      // 🌟 우주 방어막 (Space Shield) - 2500m 고도 제한!
+      if (ballMesh.position.y >= 2500) {
+        ballMesh.position.y = 2500;
+        // 위로 향하던 속도를 역전시켜 바닥으로 내리꽂음 (반발 계수 1.0)
+        ballVel.y = -Math.abs(ballVel.y);
+        
+        // 쉴드 타격 이펙트 (너무 자주 뜨지 않게 20% 확률로 조정)
+        if (Math.random() < 0.2) {
+          showEventBanner('🛡️', '우주 방어막 충돌! 챙그랑!');
+        }
       }
 
       if (ballMesh.position.y <= BALL_RADIUS) {
         ballMesh.position.y = BALL_RADIUS;
         if (isFireballMode && !hasTouchedGround) { hasTouchedGround = true; clearAllTrailParticles(); }
-        
         if (Math.abs(ballVel.z) < 2.0) { ballVel.y = 0; ballVel.z = 0; isGrounded = true; } 
         else if (Math.abs(ballVel.y) > 2.0) { ballVel.y = -ballVel.y * 0.55; ballVel.z *= 0.78; playBounceSound(); } 
         else { ballVel.y = 0; isGrounded = true; ballVel.z *= 0.965; ballRot.x = ballVel.z * 0.1; }
@@ -770,19 +758,12 @@ document.addEventListener('DOMContentLoaded', () => {
           const maxKickPower = getBaseKickPower(); const sf = maxKickPower / 100; const extraDist = maxKickPower * pFactor; 
           showEventBanner('🏃‍♂️', `세컨드 킥! 풀파워 재발사!`); totalTargetDistance += extraDist;
           
-          // 🌟 아이디어 1: 수직 속도 제한 및 레이저 빔 궤적 보정 (세컨드 킥)
-          let calcVelY = 8 * Math.sqrt(sf) + pFactor * 30 * Math.sqrt(sf);
-          let calcVelZ = -(22 * sf + pFactor * 85 * sf);
+          // 🌟 세컨드 킥도 에러나던 코드를 지우고 안전한 오리지널 궤적으로 복구!
+          ballVel.z = -(22 * sf + pFactor * 85 * sf); 
+          ballVel.y = 8 * Math.sqrt(sf) + pFactor * 30 * Math.sqrt(sf); 
+          ballVel.x = (Math.random()-0.5) * 1.5;
           
-          const MAX_VEL_Y = 150; 
-          if (calcVelY > MAX_VEL_Y) {
-            const excessY = calcVelY - MAX_VEL_Y;
-            calcVelY = MAX_VEL_Y;
-            calcVelZ -= excessY * 3.0; // 넘치는 에너지를 앞으로 몰아주기
-          }
-          
-          ballVel.y = calcVelY; ballVel.z = calcVelZ; ballVel.x = (Math.random()-0.5) * 1.5;
-          isGrounded = false; playKickSound(pFactor); return;
+          isGrounded = false; playKickSound(pFactor); return; 
         }
         ballVel.z = 0; ballVel.x = 0; ballVel.y = 0; gameState = STATES.STOPPED; setTimeout(() => { handleGameOver(Math.abs(ballMesh.position.z)); }, 1000);
       }
