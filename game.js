@@ -896,37 +896,36 @@
   // ============================================================
   // LAUNCH BALL
   // ============================================================
+  // ============================================================
+  // LAUNCH BALL
+  // ============================================================
   function triggerBallLaunch() {
-    const pFactor = power / 100;
+    // 🚀 수정 1: const 대신 let을 사용하여 능력치에 따라 변할 수 있게 고침
+    let pFactor = power / 100;
     pFactor = pFactor * (1 + (lvPower * 0.05)); // 업그레이드당 파워 5% 추가 증폭
-  // 🚀 NEW: 50% 확률로 강화킥 발동 (파워 수치 2배)
+
+    // 🚀 NEW: 50% 확률로 강화킥 발동 (파워 수치 2배)
     if (Math.random() < 0.5) {
       pFactor *= 2.0; 
       showEventBanner('🔥', `강화킥 발동! 파워 2배!`);
     }
+    
     isFireballMode   = (power >= 80) || (pFactor >= 1.5);
     hasTouchedGround = false;
 
-    // Pre-determine all 6 events (50% probability each)
+    // Pre-determine 이벤트 확률 굴리기
     hasJetpackEvent  = Math.random() < 0.5;
     hasAirplaneEvent = Math.random() < 0.5;
     hasEagleEvent    = Math.random() < 0.5;
     hasWindEvent     = Math.random() < 0.5;
     hasRocketEvent   = Math.random() < 0.5;
     hasMoleEvent     = Math.random() < 0.5;
-    // 1번 추가
     hasHeadwindEvent = Math.random() < 0.3;
-    // 2번 추가
-    checkPointHeadwindZ = -(baseTargetDistance * 0.8); // 4/5 지점
     hasSecondKickEvent = Math.random() < 0.5;
     
-    
-    
-    // triggerBallLaunch 안쪽 체크포인트(checkPointRocketZ 등) 모여있는 곳에 추가
-    checkPointWallZ = -(baseTargetDistance * (5 / 6)); // 5/6 지점
+    // 🚀 수정 2: 에러를 내던 옛날 고정 체크포인트 변수(checkPoint...Z) 계산 코드를 완전히 삭제함
 
-    
-    // ★ Event bonus formula: kickPower * 0.5 * power%
+    // ★ Event bonus formula: kickPower * 0.5 * pFactor
     const baseEventBonus = Math.max(1, Math.round(getBaseKickPower() * 0.5 * pFactor));
     eventBonus = Math.round(baseEventBonus * (1 + (lvEvent * 0.05))); // 업그레이드당 이벤트 거리 5% 증가
     eventBonusVelScale = eventBonus / 50.0; // scale relative to base tuning (50m)
@@ -934,12 +933,6 @@
     const maxKickPower = getBaseKickPower();
     baseTargetDistance = maxKickPower * pFactor;
     totalTargetDistance = baseTargetDistance;
-
-    checkPointJetpackZ  = -(baseTargetDistance * 0.25);
-    checkPointAirplaneZ = -(baseTargetDistance * (1/3));
-    checkPointEagleZ    = -(baseTargetDistance * 0.50);
-    checkPointWindZ     = -(baseTargetDistance * (2/3));
-    checkPointRocketZ   = -(baseTargetDistance * 0.75);
 
     const sf = maxKickPower / 100;
     ballVel.z = -(22 * sf + pFactor * 85 * sf);
