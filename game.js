@@ -740,6 +740,19 @@ document.addEventListener('DOMContentLoaded', () => {
       if (isRocketPushing) { rocketTimer += dt * 1.5; rocketGroup.position.set(ballMesh.position.x, ballMesh.position.y - 0.9, ballMesh.position.z); if (rocketTimer >= 1.2) { isRocketPushing = false; setTimeout(() => { rocketGroup.visible = false; }, 800); } }
       if (hasHeadwindEvent && !cpHeadwindTriggered && cZ <= -(totalTargetDistance * 0.8)) { cpHeadwindTriggered = true; const penaltyDist = getBaseKickPower() * 0.2; showEventBanner('🌪️', `역풍 발생! 거리 감소!`); totalTargetDistance -= penaltyDist; ballVel.z += 25.0 * (penaltyDist / 50.0); ballVel.y -= 10.0; }
 
+      // 🌟 실시간 궤적 보정: 비행 중 터지는 모든 이벤트와 탭 부스트의 Y축 폭주를 감시!
+      if (ballVel.y > 150) {
+        const excessY = ballVel.y - 150;
+        ballVel.y = 150; // 수직 속도는 한계치에 고정시키고
+        ballVel.z -= excessY * 2.0; // 위로 가려던 그 엄청난 에너지를 전부 Z축(앞)으로 몰빵!
+      }
+      
+      // 🌟 절대 우주 방어막: 물리 연산 버그로 1000m를 넘어가면 메테오처럼 바닥에 꽂아버림!
+      if (ballMesh.position.y > 1000) {
+        ballVel.y = -200; // 땅으로 초고속 수직 강하 (시간 절약)
+        ballMesh.position.y = 1000;
+      }
+
       if (ballMesh.position.y <= BALL_RADIUS) {
         ballMesh.position.y = BALL_RADIUS;
         if (isFireballMode && !hasTouchedGround) { hasTouchedGround = true; clearAllTrailParticles(); }
