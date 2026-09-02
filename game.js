@@ -645,8 +645,11 @@ document.addEventListener('DOMContentLoaded', () => {
   let eventBonus = 50; let eventBonusVelScale = 1.0; let baseTargetDistance = 0; let totalTargetDistance = 0;
   let hasJetpackEvent = false, hasAirplaneEvent = false, hasEagleEvent = false, hasWindEvent = false, hasRocketEvent = false, hasMoleEvent = false, hasHeadwindEvent = false, hasSecondKickEvent = false, hasBlackholeEvent = false;
   let cpJetpackTriggered = false, cpAirplaneTriggered = false, cpEagleTriggered = false, cpWindTriggered = false, cpRocketTriggered = false, cpMoleTriggered = false, cpHeadwindTriggered = false, secondKickTriggered = false, cpBlackholeTriggered = false;
-  let isJetpackAttached = false, isJetpackDetached = false, jetpackVelY = 0, airplaneActive = false, airplaneProgress = 0, isEagleCarrying = false, eagleTimer = 0, isRocketPushing = false, rocketTimer = 0;
+ let isJetpackAttached = false, isJetpackDetached = false, jetpackVelY = 0, airplaneActive = false, airplaneProgress = 0, isEagleCarrying = false, eagleTimer = 0, isRocketPushing = false, rocketTimer = 0;
 
+  // 🌟 누락되었던 카메라 기본 위치 변수 추가!
+  const defaultCamPos    = new THREE.Vector3(0.4, 2.1, 3.8);
+  const defaultCamTarget = new THREE.Vector3(0.0, 0.6, -2.5);
   camera.position.copy(defaultCamPos); camera.lookAt(defaultCamTarget);
 
   function resetGame() {
@@ -657,6 +660,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     hasJetpackEvent = hasAirplaneEvent = hasEagleEvent = hasWindEvent = hasRocketEvent = hasMoleEvent = hasHeadwindEvent = hasSecondKickEvent = hasBlackholeEvent = false;
     cpJetpackTriggered = cpAirplaneTriggered = cpEagleTriggered = cpWindTriggered = cpRocketTriggered = cpMoleTriggered = cpHeadwindTriggered = secondKickTriggered = cpBlackholeTriggered = false;
+    
     isJetpackAttached = isJetpackDetached = airplaneActive = isEagleCarrying = isRocketPushing = false;
     jetpackGroup.visible = airplaneGroup.visible = eagleGroup.visible = windParticlesGroup.visible = rocketGroup.visible = moleGroup.visible = false;
     dirLight.position.set(20, 40, 20);
