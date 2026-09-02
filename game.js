@@ -323,7 +323,70 @@
   document.getElementById('upg-btn-power').addEventListener('click', () => buyUpgrade('power'));
   document.getElementById('upg-btn-event').addEventListener('click', () => buyUpgrade('event'));
   document.getElementById('upg-btn-coin').addEventListener('click', () => buyUpgrade('coin'));
+// ============================================================
+  // SKIN SHOP SYSTEM
+  // ============================================================
+  let currentSkin = localStorage.getItem('soccer_skin') || 'basic';
+  const SKINS = {
+    basic:   { name: '기본 공', req: 0, bonus: 0, desc: '보유 효과: 없음' },
+    rainbow: { name: '🌈 무지개 공', req: 100000, bonus: 0.1, desc: '보유 효과: 킥 파워 +10%' },
+    bullet:  { name: '🚀 총알 공', req: 1000000, bonus: 0.5, desc: '보유 효과: 킥 파워 +50%' },
+    flame:   { name: '🔥 불타는 공', req: 10000000, bonus: 1.0, desc: '보유 효과: 킥 파워 +100%' }
+  };
 
+  function getSkinPowerBonus() {
+    let bonus = 0;
+    if (bestDistance >= SKINS.rainbow.req) bonus += SKINS.rainbow.bonus;
+    if (bestDistance >= SKINS.bullet.req) bonus += SKINS.bullet.bonus;
+    if (bestDistance >= SKINS.flame.req) bonus += SKINS.flame.bonus;
+    return bonus;
+  }
+
+  const skinModalEl = document.getElementById('skin-modal');
+  document.getElementById('skin-tab-btn').addEventListener('click', () => {
+    skinModalEl.classList.remove('hidden');
+    renderSkinList();
+  });
+  document.getElementById('skin-close-btn').addEventListener('click', () => skinModalEl.classList.add('hidden'));
+
+  function renderSkinList() {
+    const container = document.getElementById('skin-list-container');
+    container.innerHTML = '';
+    
+    Object.keys(SKINS).forEach(key => {
+      const s = SKINS[key];
+      const isUnlocked = bestDistance >= s.req;
+      const isEquipped = currentSkin === key;
+      
+      const item = document.createElement('div');
+      item.className = 'ranking-item';
+      item.style.flexDirection = 'column';
+      item.style.gap = '8px';
+      
+      item.innerHTML = `
+        <div style="display:flex; justify-content:space-between; width:100%; font-weight:bold;">
+          <span style="color:${isUnlocked ? 'white' : '#64748b'};">${s.name} ${isUnlocked ? '' : '🔒'}</span>
+          <span style="color:#38bdf8; font-size:0.8rem;">${s.desc}</span>
+        </div>
+        <div style="display:flex; justify-content:space-between; width:100%; font-size:0.75rem; color:#94a3b8; align-items:center;">
+          해제: ${s.req === 0 ? '기본 제공' : (s.req.toLocaleString() + 'm 이상')}
+          <button class="btn-upgrade" style="width:auto; padding:6px 12px; font-size:0.8rem; background:${isEquipped ? '#22c55e' : (isUnlocked ? '#3b82f6' : '#475569')}" ${isUnlocked ? '' : 'disabled'}>
+            ${isEquipped ? '장착 중' : (isUnlocked ? '장착하기' : '잠김')}
+          </button>
+        </div>
+      `;
+      
+      if (isUnlocked && !isEquipped) {
+        item.querySelector('button').addEventListener('click', () => {
+          currentSkin = key;
+          localStorage.setItem('soccer_skin', currentSkin);
+          applySkin(); // 3D 모델 즉시 교체
+          renderSkinList();
+        });
+      }
+      container.appendChild(item);
+    });
+  }
   // ============================================================
   // SPEED MULTIPLIER
   // ============================================================
@@ -527,15 +590,57 @@
   // ============================================================
   // SOCCER BALL
   // ============================================================
+  // ============================================================
+  // SOCCER BALL & SKINS
+  // ============================================================
   const BALL_RADIUS = 0.35;
-  const ballMesh = new THREE.Mesh(
+  const ballMesh = new THREE.Group(); // Mesh에서 Group으로 변경 (스킨 교체를 위해)
+  ballMesh.position.set(0, BALL_RADIUS, 0);
+  scene.add(ballMesh);
+
+  // 1. 기본 공
+  const basicBall = new THREE.Mesh(
     new THREE.SphereGeometry(BALL_RADIUS, 32, 32),
     new THREE.MeshStandardMaterial({ map: createSoccerBallTexture(), roughness: 0.3, metalness: 0.1 })
   );
-  ballMesh.position.set(0, BALL_RADIUS, 0);
-  ballMesh.castShadow = true;
-  ballMesh.receiveShadow = true;
-  scene.add(ballMesh);
+  basicBall.castShadow = true; basicBall.receiveShadow = true;
+
+  // 2. 무지개 공
+  function createRainbowTexture() {
+    const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+    const ctx = c.getContext('2d');
+    const grad = ctx.createLinearGradient(0,0,256,0);
+    ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#a855f7'].forEach((col, i, arr) => grad.addColorStop(i/(arr.length-1), col));
+    ctx.fillStyle = grad; ctx.fillRect(0,0,256,256);
+    return new THREE.CanvasTexture(c);
+  }
+  const rainbowBall = new THREE.Mesh(
+    new THREE.SphereGeometry(BALL_RADIUS, 32, 32),
+    new THREE.MeshStandardMaterial({ map: createRainbowTexture(), roughness: 0.2, metalness: 0.3 })
+  );
+  rainbowBall.castShadow = true; rainbowBall.receiveShadow = true;
+
+  // 3. 총알 공
+  const bulletGroup = new THREE.Group();
+  const bulletBody = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.6, 16), new THREE.MeshStandardMaterial({color:'#cbd5e1', metalness:0.8, roughness:0.2}));
+  bulletBody.rotation.x = Math.PI/2; bulletBody.castShadow = true;
+  const bulletTip = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.3, 16), new THREE.MeshStandardMaterial({color:'#94a3b8', metalness:0.9, roughness:0.1}));
+  bulletTip.position.z = 0.45; bulletTip.rotation.x = Math.PI/2; bulletTip.castShadow = true;
+  const bulletBack = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.15, 0.1, 16), new THREE.MeshStandardMaterial({color:'#f59e0b', metalness:0.8}));
+  bulletBack.position.z = -0.35; bulletBack.rotation.x = Math.PI/2;
+  bulletGroup.add(bulletBody, bulletTip, bulletBack);
+
+  // 4. 불타는 공 (외형은 기본공과 같음)
+  const flameBall = basicBall.clone();
+
+  function applySkin() {
+    while(ballMesh.children.length > 0) ballMesh.remove(ballMesh.children[0]);
+    if (currentSkin === 'rainbow') ballMesh.add(rainbowBall);
+    else if (currentSkin === 'bullet') ballMesh.add(bulletGroup);
+    else if (currentSkin === 'flame') ballMesh.add(flameBall);
+    else ballMesh.add(basicBall);
+  }
+  applySkin();
 
   // ============================================================
   // PLAYER MODEL
@@ -699,38 +804,59 @@
   
 
   // ============================================================
-  // FIREBALL TRAIL SYSTEM (80%+ power)
+  // MULTI-TRAIL SYSTEM (스킨 잔상 효과)
   // ============================================================
-  const fireParticles = [];
-  const fireGroup = new THREE.Group();
-  scene.add(fireGroup);
+  const trailParticles = [];
+  const trailGroup = new THREE.Group();
+  scene.add(trailGroup);
 
-  function createFireParticle(pos) {
-    const fm = new THREE.Mesh(
-      new THREE.SphereGeometry(Math.random()*0.18+0.08, 8, 8),
-      new THREE.MeshBasicMaterial({ color: Math.random()>0.5?'#ff4500':'#ffcc00', transparent: true, opacity: 0.9 })
-    );
-    fm.position.copy(pos);
-    fm.position.x += (Math.random()-0.5)*0.2;
-    fm.position.y += (Math.random()-0.5)*0.2;
-    fm.position.z += (Math.random()-0.5)*0.2;
-    fireGroup.add(fm);
-    fireParticles.push({ mesh: fm, life: 1.0, decay: Math.random()*0.06+0.04 });
+  function createTrailParticle(pos) {
+    let mesh, decay = 0.05;
+    if (currentSkin === 'rainbow') {
+      const cols = ['#ef4444','#f97316','#eab308','#22c55e','#3b82f6','#a855f7'];
+      mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(Math.random()*0.15+0.1, 8, 8),
+        new THREE.MeshBasicMaterial({ color: cols[Math.floor(Math.random()*cols.length)], transparent: true, opacity: 0.8 })
+      );
+    } else if (currentSkin === 'bullet') {
+      mesh = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.08, 0.08, 0.5, 8),
+        new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.6 })
+      );
+      mesh.rotation.copy(ballMesh.rotation); // 총알과 같은 방향
+      mesh.position.z += Math.random()*0.2;
+      decay = 0.08;
+    } else { // flame or basic(fireball)
+      mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(Math.random()*0.18+0.08, 8, 8),
+        new THREE.MeshBasicMaterial({ color: Math.random()>0.5?'#ff4500':'#ffcc00', transparent: true, opacity: 0.9 })
+      );
+    }
+    
+    mesh.position.copy(pos);
+    if(currentSkin !== 'bullet') { // 총알은 직선 잔상, 나머지는 퍼짐
+      mesh.position.x += (Math.random()-0.5)*0.2;
+      mesh.position.y += (Math.random()-0.5)*0.2;
+      mesh.position.z += (Math.random()-0.5)*0.2;
+    }
+    trailGroup.add(mesh);
+    trailParticles.push({ mesh: mesh, life: 1.0, decay: decay });
   }
 
-  function updateFireParticles() {
-    for (let i = fireParticles.length-1; i >= 0; i--) {
-      const fp = fireParticles[i];
-      fp.life -= fp.decay;
-      fp.mesh.scale.multiplyScalar(0.92);
-      fp.mesh.material.opacity = fp.life;
-      if (fp.life <= 0) { fireGroup.remove(fp.mesh); fireParticles.splice(i, 1); }
+  function updateTrailParticles() {
+    for (let i = trailParticles.length-1; i >= 0; i--) {
+      const tp = trailParticles[i];
+      tp.life -= tp.decay;
+      if (currentSkin === 'bullet') tp.mesh.scale.set(tp.life, 1, tp.life); // 총알은 점점 얇아짐
+      else tp.mesh.scale.multiplyScalar(0.92);
+      tp.mesh.material.opacity = tp.life;
+      if (tp.life <= 0) { trailGroup.remove(tp.mesh); trailParticles.splice(i, 1); }
     }
   }
 
-  function clearAllFireParticles() {
-    fireParticles.forEach(fp => fireGroup.remove(fp.mesh));
-    fireParticles.length = 0;
+  function clearAllTrailParticles() {
+    trailParticles.forEach(tp => trailGroup.remove(tp.mesh));
+    trailParticles.length = 0;
   }
 
   // ============================================================
@@ -803,7 +929,7 @@
 
     isFireballMode = false;
     hasTouchedGround = false;
-    clearAllFireParticles();
+    clearAllTrailParticles();
 
     hasJetpackEvent = hasAirplaneEvent = hasEagleEvent = false;
     hasWindEvent = hasRocketEvent = hasMoleEvent = false;
@@ -902,7 +1028,7 @@
   function triggerBallLaunch() {
     // 🚀 수정 1: const 대신 let을 사용하여 능력치에 따라 변할 수 있게 고침
     let pFactor = power / 100;
-    pFactor = pFactor * (1 + (lvPower * 0.05)); // 업그레이드당 파워 5% 추가 증폭
+    pFactor = pFactor * (1 + (lvPower * 0.05) + getSkinPowerBonus()); // 업그레이드당 파워 5% 추가 증폭
 
     // 🚀 NEW: 50% 확률로 강화킥 발동 (파워 수치 2배)
     if (Math.random() < 0.5) {
@@ -971,16 +1097,28 @@
       ballVel.x *= Math.pow(airDrag, dt * 60);
 
       // 공의 위치 이동 (기존과 동일)
-      ballMesh.position.x += ballVel.x * dt;
-      ballMesh.position.y += ballVel.y * dt;
-      ballMesh.position.z += ballVel.z * dt;
-      
-      // 공의 회전 효과 (기존과 완벽하게 동일하게 유지!)
-      ballMesh.rotation.x += ballRot.x * dt;
+      // 공의 위치 이동
+   ballMesh.position.x += ballVel.x * dt;
+   ballMesh.position.y += ballVel.y * dt;
+   ballMesh.position.z += ballVel.z * dt;
+
+   // 🚀 스킨별 회전 로직 (총알은 구르지 않고 비행 방향을 바라봄)
+   if (currentSkin === 'bullet') {
+     if (ballVel.y !== 0 || ballVel.z !== 0) {
+       ballMesh.lookAt(ballMesh.position.x + ballVel.x, ballMesh.position.y + ballVel.y, ballMesh.position.z + ballVel.z);
+     }
+   } else {
+     ballMesh.rotation.x += ballRot.x * dt;
+   }
+
+   // 공중에 떠있을 때 스킨별 트레일 생성
+   if (!hasTouchedGround) {
+     if (currentSkin !== 'basic' || isFireballMode) createTrailParticle(ballMesh.position);
+   }
 
       if (isFireballMode && !hasTouchedGround) createFireParticle(ballMesh.position);
 
-      const cZ = ballMesh.position.z;
+  const cZ = ballMesh.position.z;
 
 
       // ---- STAGE 1: Jetpack (1/4 point) ----
@@ -1104,7 +1242,7 @@
 
         if (isFireballMode && !hasTouchedGround) {
           hasTouchedGround = true;
-          clearAllFireParticles();
+          clearAllTrailParticles();
         }
 
         if (Math.abs(ballVel.y) > 2.0) {
@@ -1157,7 +1295,11 @@
 
     // --- MISC UPDATES ---
     updateFireParticles();
-
+    // 🔥 불타는 공은 차기 전이나 멈췄을 때도 항상 불꽃 방출
+    if (currentSkin === 'flame' && Math.random() < 0.5) {
+      createTrailParticle(ballMesh.position);
+    }
+    
     currentDistanceEl.textContent = Math.abs(ballMesh.position.z).toFixed(1) + ' m';
 
     if (windParticlesGroup.visible) {
